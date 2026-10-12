@@ -57,7 +57,7 @@ export const LandingPage = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
               <span className="font-extrabold text-lg">E</span>
             </div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900">ResumeAI</span>
+            <span className="font-extrabold text-lg tracking-tight text-slate-900">ELEVORA</span>
           </NavLink>
 
           {/* Nav Links */}
@@ -227,10 +227,10 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* Why Choose ResumeAI Section */}
+      {/* Why Choose ELEVORA Section */}
       <section id="features" className="py-20 px-4 sm:px-8 bg-white border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto text-center space-y-4">
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Why Choose ResumeAI?</h2>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Why Choose ELEVORA?</h2>
           <p className="text-sm sm:text-base text-slate-500 max-w-xl mx-auto">
             Everything you need to create a resume that stands out to recruiters and applicant tracking systems.
           </p>
@@ -302,7 +302,7 @@ export const LandingPage = () => {
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Ready to build your career-defining resume?</h2>
           <p className="text-slate-300 text-sm max-w-xl mx-auto">
-            Join over 50,000 professionals who accelerated their hiring pipeline with ResumeAI.
+            Join over 50,000 professionals who accelerated their hiring pipeline with ELEVORA.
           </p>
           <div>
             <Button
@@ -321,7 +321,7 @@ export const LandingPage = () => {
       <footer className="bg-white py-8 px-4 sm:px-8 border-t border-slate-200 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-900">ResumeAI</span>
+            <span className="font-bold text-slate-900">ELEVORA</span>
             <span>© {new Date().getFullYear()} All rights reserved.</span>
           </div>
           <div className="flex gap-6">
@@ -336,7 +336,7 @@ export const LandingPage = () => {
       <Modal
         isOpen={demoModalOpen}
         onClose={() => setDemoModalOpen(false)}
-        title="ResumeAI Product Walkthrough"
+        title="ELEVORA Product Walkthrough"
         subtitle="See how our multi-step AI wizard generates interview-ready resumes in minutes."
         maxWidth="max-w-2xl"
       >

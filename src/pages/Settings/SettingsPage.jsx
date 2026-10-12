@@ -83,12 +83,12 @@ export const SettingsPage = () => {
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Account Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Registered Email" value={profile.email} disabled />
-              <Input label="Account Tier" value="ResumeAI Pro (Activated)" disabled />
+              <Input label="Account Tier" value="ELEVORA Pro (Activated)" disabled />
             </div>
 
             <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-100 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">ResumeAI Pro Plan</span>
+                <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">ELEVORA Pro Plan</span>
                 <p className="text-xs text-slate-600 mt-0.5">Unlimited PDF/DOCX exports, ATS scans & AI enhancement</p>
               </div>
               <span className="text-xs font-bold bg-blue-600 text-white px-3 py-1 rounded-lg shadow-sm">

@@ -320,7 +320,7 @@ export const generateDocxResume = async (resumeData) => {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${(profile.fullName || 'Resume').replace(/\s+/g, '_')}_ResumeAI.docx`;
+  a.download = `${(profile.fullName || 'Resume').replace(/\s+/g, '_')}_ELEVORA.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -87,7 +87,7 @@ export const TemplateCreative = ({ data }) => {
 
         <div className="mt-8 pt-4 border-t border-slate-800 text-[10px] text-slate-400 flex items-center gap-1.5">
           <Sparkles className="w-3 h-3 text-indigo-400" />
-          <span>ResumeAI Verified</span>
+          <span>ELEVORA Verified</span>
         </div>
       </aside>
 

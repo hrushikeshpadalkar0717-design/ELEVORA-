@@ -14,7 +14,7 @@ import { aiService } from '../services/aiService';
 
 const ResumeContext = createContext(null);
 
-const STORAGE_KEY = 'resumeai_app_state_v1';
+const STORAGE_KEY = 'elevora_app_state_v1';
 
 export const ResumeProvider = ({ children }) => {
   // Load from localStorage or defaults

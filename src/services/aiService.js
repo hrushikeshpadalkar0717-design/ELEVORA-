@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  ResumeAI – AI Simulation Service
+//  ELEVORA – AI Simulation Service
 //  All functions are field + subfield aware.
 // ─────────────────────────────────────────────────────────────
 

@@ -51,7 +51,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-white tracking-tight">ResumeAI</span>
+                  <span className="font-bold text-lg text-white tracking-tight">ELEVORA</span>
                   <span className="text-[10px] font-semibold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/30">PRO</span>
                 </div>
                 <span className="text-[11px] text-slate-400 font-normal">Build Your Future</span>
@@ -118,7 +118,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Need Help Link */}
           <a
-            href="mailto:support@resumeai.demo"
+            href="mailto:support@elevora.app"
             className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-white transition-colors"
           >
             <HelpCircle className="w-4 h-4 text-slate-500" />

@@ -65,7 +65,7 @@ export const TopNav = ({ onToggleSidebar }) => {
         <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500">
           <span>App</span>
           <span>/</span>
-          <span className="text-slate-900 font-semibold">ResumeAI Workspace</span>
+          <span className="text-slate-900 font-semibold">ELEVORA Workspace</span>
         </div>
       </div>
 

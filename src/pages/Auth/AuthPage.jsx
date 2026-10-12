@@ -28,18 +28,18 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
 
   // Sign up fields
   const [signUpForm, setSignUpForm] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+91 98765 43210',
+    fullName: '',
+    email: '',
+    phone: '',
     field: 'Engineering',
     subfield: 'Mechanical Engineering',
-    password: 'password123',
+    password: '',
   });
 
   // Log in fields
   const [loginForm, setLoginForm] = useState({
-    email: 'john.doe@example.com',
-    password: 'password123',
+    email: '',
+    password: '',
   });
 
   const fieldOptions = [
@@ -67,7 +67,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
       return;
     }
     signup(signUpForm);
-    showToast('Account created successfully! Welcome to ResumeAI.', 'success');
+    showToast('Account created successfully! Welcome to ELEVORA.', 'success');
     navigate('/dashboard');
   };
 
@@ -77,13 +77,13 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
       showToast('Please enter your email', 'error');
       return;
     }
-    login({ email: loginForm.email, fullName: signUpForm.fullName || 'John Doe' });
-    showToast('Welcome back to ResumeAI!', 'success');
+    login({ email: loginForm.email, fullName: signUpForm.fullName || 'User' });
+    showToast('Welcome back to ELEVORA!', 'success');
     navigate('/dashboard');
   };
 
   const handleSocialAuth = (provider) => {
-    login({ email: `user@${provider.toLowerCase()}.com`, fullName: 'John Doe' });
+    login({ email: `user@${provider.toLowerCase()}.com`, fullName: 'New User' });
     showToast(`Logged in via ${provider}!`, 'success');
     navigate('/dashboard');
   };
@@ -102,7 +102,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
                 <span className="font-extrabold text-lg">E</span>
               </div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900">ResumeAI</span>
+              <span className="font-extrabold text-lg tracking-tight text-slate-900">ELEVORA</span>
             </NavLink>
 
             {/* Heading */}
@@ -182,7 +182,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                 label="Full Name"
                 value={signUpForm.fullName}
                 onChange={(e) => setSignUpForm({ ...signUpForm, fullName: e.target.value })}
-                placeholder="e.g. John Doe"
+                placeholder="Your Full Name"
                 icon={User}
                 required
               />
@@ -192,7 +192,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                 type="email"
                 value={signUpForm.email}
                 onChange={(e) => setSignUpForm({ ...signUpForm, email: e.target.value })}
-                placeholder="john@example.com"
+                placeholder="username@gmail.com"
                 icon={Mail}
                 required
               />
@@ -201,7 +201,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                 label="Phone Number (Optional)"
                 value={signUpForm.phone}
                 onChange={(e) => setSignUpForm({ ...signUpForm, phone: e.target.value })}
-                placeholder="+91 98765 43210"
+                placeholder="+91 XXXXX XXXXX"
                 icon={Phone}
               />
 
@@ -237,7 +237,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                 type="email"
                 value={loginForm.email}
                 onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                placeholder="john@example.com"
+                placeholder="username@gmail.com"
                 icon={Mail}
                 required
               />
