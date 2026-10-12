@@ -12,7 +12,7 @@ import { useToast } from '../../context/ToastContext';
 
 export const StepExperience = () => {
   const navigate = useNavigate();
-  const { experience, addExperience, updateExperience, deleteExperience } = useResume();
+  const { experience, addExperience, updateExperience, deleteExperience, profile, careerGoal } = useResume();
   const { showToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -312,6 +312,9 @@ export const StepExperience = () => {
         onClose={() => setAiModalOpen(false)}
         initialText={initialAiText}
         onApply={handleApplyAIEnhance}
+        field={profile?.field || ''}
+        subfield={profile?.subfield || ''}
+        role={form.role || careerGoal?.targetRoles?.[0] || ''}
       />
     </div>
   );

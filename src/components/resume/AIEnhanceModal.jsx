@@ -6,7 +6,7 @@ import { Sparkles, ArrowRight, Check } from 'lucide-react';
 import { aiService } from '../../services/aiService';
 import { useToast } from '../../context/ToastContext';
 
-export const AIEnhanceModal = ({ isOpen, onClose, initialText = '', onApply }) => {
+export const AIEnhanceModal = ({ isOpen, onClose, initialText = '', onApply, field = '', subfield = '', role = '' }) => {
   const [inputText, setInputText] = useState(initialText);
   const [enhancedText, setEnhancedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +19,7 @@ export const AIEnhanceModal = ({ isOpen, onClose, initialText = '', onApply }) =
     }
     setIsLoading(true);
     try {
-      const res = await aiService.enhanceBulletPoint(inputText);
+      const res = await aiService.enhanceBulletPoint(inputText, role, field, subfield);
       setEnhancedText(res);
       showToast('Bullet point enhanced with AI!', 'success');
     } catch {

@@ -10,7 +10,7 @@ import { useToast } from '../../context/ToastContext';
 
 export const StepCareerGoal = () => {
   const navigate = useNavigate();
-  const { careerGoal, updateCareerGoal, skills, experience, projects } = useResume();
+  const { careerGoal, updateCareerGoal, skills, experience, projects, profile } = useResume();
   const { showToast } = useToast();
 
   const [stage, setStage] = useState(careerGoal.stage || 'Fresher');
@@ -50,12 +50,17 @@ export const StepCareerGoal = () => {
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true);
     try {
+      const userField = profile?.field || '';
+      const userSubfield = profile?.subfield || '';
+      const userRole = careerGoal.targetRoles?.[0] || userSubfield || userField || 'Professional';
       const generated = await aiService.generateSummary({
-        role: careerGoal.targetRoles?.[0] || 'Mechanical Design Engineer',
+        role: userRole,
         stage,
         skills,
         experience,
-        projects
+        projects,
+        field: userField,
+        subfield: userSubfield,
       });
       setSummary(generated);
       updateCareerGoal({ summary: generated, stage, roleType });
