@@ -388,7 +388,276 @@ export const defaultInterviewQuestions = {
   ]
 };
 
-// Helper: get questions for a given role, with fallback to generic questions
-export const getQuestionsForRole = (role) => {
-  return defaultInterviewQuestions[role] || defaultInterviewQuestions['_generic'];
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLE ALIAS MAP
+// Maps every role name from ROLES_BY_FIELD → the key in defaultInterviewQuestions
+// Roles that share a question bank are grouped together.
+// ─────────────────────────────────────────────────────────────────────────────
+const ROLE_ALIAS_MAP = {
+  // === COMPUTER SCIENCE & IT ===
+  // Frontend / UI roles
+  'Frontend Developer': 'Frontend Developer',
+  'UI Developer': 'Frontend Developer',
+  'UX Engineer': 'Frontend Developer',
+  'React Developer': 'Frontend Developer',
+  'Angular Developer': 'Frontend Developer',
+  'Vue.js Developer': 'Frontend Developer',
+  'Web Designer': 'Frontend Developer',
+  'Interaction Designer': 'Frontend Developer',
+  'Motion Designer': 'Frontend Developer',
+
+  // Backend / Database roles
+  'Backend Developer': 'Backend Developer',
+  'Backend Engineer': 'Backend Developer',
+  'Node.js Developer': 'Backend Developer',
+  'Python Developer': 'Backend Developer',
+  'Java Developer': 'Backend Developer',
+  'API Developer': 'Backend Developer',
+  'Microservices Developer': 'Backend Developer',
+  'Database Administrator (DBA)': 'Backend Developer',
+  'SQL Developer': 'Backend Developer',
+  'NoSQL Engineer': 'Backend Developer',
+  'Data Warehouse Engineer': 'Backend Developer',
+  'ETL Developer': 'Backend Developer',
+
+  // Full-stack roles
+  'Software Engineer': 'Backend Developer',
+  'Full Stack Developer': 'Backend Developer',
+  'Software Developer': 'Backend Developer',
+  'Mobile App Developer (Android/iOS)': 'Backend Developer',
+  'Game Developer': 'Backend Developer',
+
+  // ML / Data Science roles
+  'Machine Learning Engineer': 'Machine Learning Engineer',
+  'Deep Learning Engineer': 'Machine Learning Engineer',
+  'MLOps Engineer': 'Machine Learning Engineer',
+  'NLP Engineer': 'Machine Learning Engineer',
+  'Computer Vision Engineer': 'Machine Learning Engineer',
+  'AI Researcher': 'Machine Learning Engineer',
+  'Data Scientist': 'Data Scientist',
+  'Data Analyst': 'Data Scientist',
+  'Business Intelligence Analyst': 'Data Scientist',
+  'Data Engineer': 'Data Scientist',
+
+  // Cybersecurity roles
+  'Cybersecurity Analyst': 'Cybersecurity Analyst',
+  'Penetration Tester (Ethical Hacker)': 'Cybersecurity Analyst',
+  'Security Operations Engineer (SOC)': 'Cybersecurity Analyst',
+  'Cloud Security Engineer': 'Cybersecurity Analyst',
+  'Vulnerability Researcher': 'Cybersecurity Analyst',
+  'Incident Response Analyst': 'Cybersecurity Analyst',
+  'Application Security Engineer': 'Cybersecurity Analyst',
+
+  // DevOps roles
+  'DevOps Engineer': 'DevOps Engineer',
+  'Cloud Engineer (AWS/GCP/Azure)': 'DevOps Engineer',
+  'Site Reliability Engineer (SRE)': 'DevOps Engineer',
+  'Platform Engineer': 'DevOps Engineer',
+  'Infrastructure Engineer': 'DevOps Engineer',
+  'Kubernetes Engineer': 'DevOps Engineer',
+  'CI/CD Engineer': 'DevOps Engineer',
+  'Cloud Architect': 'DevOps Engineer',
+  'Systems Administrator': 'DevOps Engineer',
+
+  // Networking / IT Management
+  'Network Engineer': 'Backend Developer',
+  'Network Administrator': 'Backend Developer',
+  'Wireless Engineer': 'Backend Developer',
+  'IT Project Manager': 'Backend Developer',
+  'IT Manager': 'Backend Developer',
+  'IT Consultant': 'Backend Developer',
+  'Business Analyst (IT)': 'Data Scientist',
+  'ERP Consultant': 'Backend Developer',
+
+  // === ENGINEERING ===
+  // Mechanical
+  'Mechanical Design Engineer': 'Mechanical Design Engineer',
+  'Product Design Engineer': 'Mechanical Design Engineer',
+  'CAD Engineer': 'Mechanical Design Engineer',
+  'Simulation/FEA Engineer': 'Mechanical Design Engineer',
+  'Manufacturing Engineer': 'Mechanical Design Engineer',
+  'Automotive Engineer': 'Mechanical Design Engineer',
+  'Thermal Engineer': 'Mechanical Design Engineer',
+  'Robotics Engineer': 'Mechanical Design Engineer',
+  'R&D Engineer': 'Mechanical Design Engineer',
+  'Production Engineer': 'Mechanical Design Engineer',
+  'Quality Engineer': 'Mechanical Design Engineer',
+  'Process Engineer': 'Mechanical Design Engineer',
+
+  // Electrical
+  'Electrical Design Engineer': 'Electrical Design Engineer',
+  'Power Systems Engineer': 'Electrical Design Engineer',
+  'Control Systems Engineer': 'Electrical Design Engineer',
+  'Instrumentation Engineer': 'Electrical Design Engineer',
+  'Automation Engineer': 'Electrical Design Engineer',
+  'High Voltage Engineer': 'Electrical Design Engineer',
+  'Renewable Energy Engineer': 'Electrical Design Engineer',
+  'Protection & Relay Engineer': 'Electrical Design Engineer',
+  'PCB Design Engineer': 'Electrical Design Engineer',
+  'Embedded Systems Engineer': 'Electrical Design Engineer',
+
+  // Electronics
+  'Electronics Design Engineer': 'Electrical Design Engineer',
+  'VLSI Design Engineer': 'Electrical Design Engineer',
+  'RF Engineer': 'Electrical Design Engineer',
+  'Signal Processing Engineer': 'Electrical Design Engineer',
+  'IoT Engineer': 'Mechanical Design Engineer',
+  'Telecom Engineer': 'Electrical Design Engineer',
+  'Hardware Engineer': 'Electrical Design Engineer',
+  'Firmware Developer': 'Electrical Design Engineer',
+  'FPGA Engineer': 'Electrical Design Engineer',
+  'Systems Architect': 'Electrical Design Engineer',
+
+  // Civil / Structural
+  'Structural Engineer': 'Structural Engineer',
+  'Site Engineer': 'Structural Engineer',
+  'Project Manager - Construction': 'Structural Engineer',
+  'Geotechnical Engineer': 'Structural Engineer',
+  'Transportation Engineer': 'Structural Engineer',
+  'Highway Engineer': 'Structural Engineer',
+  'Urban Planner': 'Structural Engineer',
+  'Quantity Surveyor': 'Structural Engineer',
+  'Water Resources Engineer': 'Structural Engineer',
+  'Construction Manager': 'Structural Engineer',
+  'Environmental Engineer': 'Structural Engineer',
+
+  // Aerospace
+  'Aerospace Design Engineer': 'Mechanical Design Engineer',
+  'Propulsion Engineer': 'Mechanical Design Engineer',
+  'Avionics Engineer': 'Electrical Design Engineer',
+  'Structures Engineer': 'Structural Engineer',
+  'Flight Test Engineer': 'Mechanical Design Engineer',
+  'Systems Engineer': 'Mechanical Design Engineer',
+  'CFD Engineer': 'Mechanical Design Engineer',
+
+  // Others
+  'Biomedical Engineer': 'Mechanical Design Engineer',
+  'Industrial Engineer': 'Mechanical Design Engineer',
+  'Safety Engineer': 'Mechanical Design Engineer',
+  'Test Engineer': 'Mechanical Design Engineer',
+  'Design Engineer': 'Mechanical Design Engineer',
+  'Project Engineer': 'Mechanical Design Engineer',
+
+  // === HEALTHCARE ===
+  'General Physician': '_medical',
+  'Junior Resident Doctor': '_medical',
+  'Medical Officer': '_medical',
+  'Emergency Medicine Doctor': '_medical',
+  'Public Health Doctor': '_medical',
+  'Government Medical Officer': '_medical',
+  'Clinical Research Associate': '_medical',
+  'House Surgeon': '_medical',
+  'General Surgeon': '_medical',
+  'Neurosurgeon': '_medical',
+  'Cardiothoracic Surgeon': '_medical',
+  'Orthopedic Surgeon': '_medical',
+  'Staff Nurse': '_medical',
+  'ICU Nurse': '_medical',
+  'Dental Surgeon': '_medical',
+  'Pharmacist': '_medical',
+  'Physiotherapist': '_medical',
+  'Radiologist (MD/DNB)': '_medical',
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MEDICAL / HEALTHCARE fallback questions (for roles not yet in main bank)
+// ─────────────────────────────────────────────────────────────────────────────
+const medicalFallback = [
+  {
+    id: 'med-1', category: 'Technical', difficulty: 'Medium', roleSpecific: true,
+    question: 'How do you approach a patient presenting with acute chest pain?',
+    keyPoints: ['Immediate ECG + troponin to rule out STEMI/NSTEMI','OLDCART history: Onset, Location, Duration, Character, Alleviating/Aggravating, Radiation, Timing','Differential: ACS, PE, aortic dissection, tension pneumothorax'],
+    suggestedAnswer: 'Obtain a 12-lead ECG within 10 minutes. Give aspirin 325mg and sublingual nitrate if BP permits. Check troponin. Take a focused OLDCART history while monitoring vitals. Establish IV access and O2. Differentiate ACS, PE, aortic dissection, and tension pneumothorax clinically. Activate the cath lab immediately if STEMI is confirmed on ECG.'
+  },
+  {
+    id: 'med-2', category: 'Technical', difficulty: 'Hard', roleSpecific: true,
+    question: 'Describe your approach to managing septic shock following the Surviving Sepsis Campaign guidelines.',
+    keyPoints: ['Sepsis-3 definition: life-threatening organ dysfunction from infection','Hour-1 bundle: cultures, antibiotics, 30mL/kg crystalloid, vasopressors, lactate','Reassess fluid responsiveness — avoid over-resuscitation'],
+    suggestedAnswer: 'Apply Sepsis-3 definition: suspected infection + SOFA ≥2. Begin hour-1 bundle: draw blood cultures before antibiotics, start broad-spectrum antibiotics within 1 hour, initiate 30mL/kg IV crystalloid, add norepinephrine if MAP <65 despite fluids, measure serial lactate. Reassess fluid responsiveness using dynamic measures (PLR, PPV) to avoid fluid overload.'
+  },
+  {
+    id: 'med-3', category: 'Behavioral', difficulty: 'Medium', roleSpecific: false,
+    question: 'Describe a clinically challenging case you managed. What was your reasoning process?',
+    keyPoints: ['STAR: Situation, Task, Action, Result','Pattern recognition vs systematic differential','Communication with seniors and multidisciplinary team'],
+    suggestedAnswer: 'Choose a case that demonstrates clinical reasoning. Describe the presenting complaint, your differential diagnosis, how you prioritized investigations, your management plan, and the outcome. Emphasize communication with the team and what you learned.'
+  },
+  {
+    id: 'med-4', category: 'HR', difficulty: 'Easy', roleSpecific: false,
+    question: 'How do you ensure empathetic communication with patients and their families?',
+    keyPoints: ['SPIKES protocol for breaking bad news','Acknowledge emotions before giving information','Plain language, checking understanding with teach-back'],
+    suggestedAnswer: 'I use the SPIKES protocol for delivering difficult news. I always acknowledge the patient\'s emotions before proceeding with clinical information. I use plain language, avoid jargon, ask "What questions do you have?" rather than "Do you understand?", and use teach-back to confirm comprehension.'
+  },
+  {
+    id: 'med-5', category: 'Role-specific', difficulty: 'Hard', roleSpecific: true,
+    question: 'How do you clinically differentiate between Type 1 and Type 2 Respiratory Failure?',
+    keyPoints: ['Type 1: PaO2 <60mmHg, PaCO2 normal/low — hypoxemia without hypercapnia (V/Q mismatch, diffusion defect)','Type 2: PaO2 <60mmHg AND PaCO2 >45mmHg — hypercapnia (alveolar hypoventilation)','ABG interpretation guides oxygen and ventilatory support strategy'],
+    suggestedAnswer: 'ABG is key. Type 1 (hypoxic): low PaO2, normal or low PaCO2 — caused by V/Q mismatch (PE, pneumonia), diffusion defect (pulmonary fibrosis), or shunt. Supplemental O2 improves Type 1. Type 2 (hypercapnic): low PaO2 AND high PaCO2 — caused by alveolar hypoventilation (COPD, neuromuscular disease). High-flow O2 can worsen CO2 retention in COPD — use controlled O2 targeting SpO2 88-92%, consider NIV.'
+  }
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  HELPER: get questions for a role with smart fallback chain
+// ─────────────────────────────────────────────────────────────────────────────
+export const getQuestionsForRole = (role, field = '', subfield = '') => {
+  if (!role) return defaultInterviewQuestions['_generic'];
+
+  // 1. Exact match in question bank
+  if (defaultInterviewQuestions[role]) {
+    return defaultInterviewQuestions[role];
+  }
+
+  // 2. Role alias mapping
+  const aliasKey = ROLE_ALIAS_MAP[role];
+  if (aliasKey === '_medical') return medicalFallback;
+  if (aliasKey && defaultInterviewQuestions[aliasKey]) {
+    return defaultInterviewQuestions[aliasKey];
+  }
+
+  // 3. Fuzzy match — partial name lookup in question bank
+  const bankKeys = Object.keys(defaultInterviewQuestions).filter((k) => k !== '_generic');
+  const fuzzyMatch = bankKeys.find(
+    (k) => role.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(role.toLowerCase().split(' ')[0])
+  );
+  if (fuzzyMatch) return defaultInterviewQuestions[fuzzyMatch];
+
+  // 4. Domain-level fallback based on field/subfield
+  if (field) {
+    const fieldLower = field.toLowerCase();
+    if (fieldLower.includes('computer') || fieldLower.includes('it') || fieldLower.includes('software')) {
+      const subfieldLower = (subfield || '').toLowerCase();
+      if (subfieldLower.includes('data') || subfieldLower.includes('ai') || subfieldLower.includes('ml')) {
+        return defaultInterviewQuestions['Machine Learning Engineer'];
+      }
+      if (subfieldLower.includes('security') || subfieldLower.includes('cyber')) {
+        return defaultInterviewQuestions['Cybersecurity Analyst'];
+      }
+      if (subfieldLower.includes('devops') || subfieldLower.includes('cloud')) {
+        return defaultInterviewQuestions['DevOps Engineer'];
+      }
+      if (subfieldLower.includes('frontend') || subfieldLower.includes('ui')) {
+        return defaultInterviewQuestions['Frontend Developer'];
+      }
+      return defaultInterviewQuestions['Backend Developer'];
+    }
+    if (fieldLower.includes('engineering')) {
+      const subfieldLower = (subfield || '').toLowerCase();
+      if (subfieldLower.includes('civil') || subfieldLower.includes('struct')) {
+        return defaultInterviewQuestions['Structural Engineer'];
+      }
+      if (subfieldLower.includes('electrical') || subfieldLower.includes('electron')) {
+        return defaultInterviewQuestions['Electrical Design Engineer'];
+      }
+      return defaultInterviewQuestions['Mechanical Design Engineer'];
+    }
+    if (fieldLower.includes('healthcare') || fieldLower.includes('medical')) {
+      return medicalFallback;
+    }
+    if (fieldLower.includes('data') || fieldLower.includes('science')) {
+      return defaultInterviewQuestions['Data Scientist'];
+    }
+  }
+
+  // 5. Last resort: generic questions
+  return defaultInterviewQuestions['_generic'];
+};
+

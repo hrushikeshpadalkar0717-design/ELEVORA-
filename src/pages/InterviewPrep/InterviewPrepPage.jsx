@@ -50,8 +50,8 @@ export const InterviewPrepPage = () => {
   const roleQuestions = useMemo(() => {
     if (!selectedRole) return [];
     // Prefer session-added questions (AI generated), then static bank
-    return questionsMap[selectedRole] || getQuestionsForRole(selectedRole);
-  }, [selectedRole, questionsMap]);
+    return questionsMap[selectedRole] || getQuestionsForRole(selectedRole, userField, userSubfield);
+  }, [selectedRole, questionsMap, userField, userSubfield]);
 
   const categories = ['All', 'Technical', 'Behavioral', 'HR', 'Role-specific'];
 
@@ -92,7 +92,7 @@ export const InterviewPrepPage = () => {
       );
       setQuestionsMap((prev) => ({
         ...prev,
-        [selectedRole]: [newQ, ...(prev[selectedRole] || getQuestionsForRole(selectedRole))]
+        [selectedRole]: [newQ, ...(prev[selectedRole] || getQuestionsForRole(selectedRole, userField, userSubfield))]
       }));
       setExpandedId(newQ.id);
       showToast('New AI interview question generated!', 'success');

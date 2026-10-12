@@ -565,8 +565,54 @@ const DOMAIN_CONFIG = {
 // ─────────────────────────────────────────────────────────────────────────────
 function getDomainConfig(field, subfield) {
   const fieldMap = DOMAIN_CONFIG[field];
-  if (!fieldMap) return DOMAIN_CONFIG['Engineering']['_default'];
+  if (!fieldMap) {
+    // Try to find the field by partial match
+    const matchedField = Object.keys(DOMAIN_CONFIG).find(
+      (k) => k.toLowerCase().includes((field || '').toLowerCase())
+    );
+    if (matchedField) {
+      const mfMap = DOMAIN_CONFIG[matchedField];
+      return mfMap[subfield] || mfMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+    }
+    return DOMAIN_CONFIG['Engineering']['_default'];
+  }
   return fieldMap[subfield] || fieldMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  HELPER: pick field-appropriate skills from user's stored skills
+//  If user's top skills look unrelated to their field, use domain defaults.
+// ─────────────────────────────────────────────────────────────────────────────
+function pickRelevantSkills(skills, field, subfield, cfg) {
+  const stored = skills?.technical || [];
+  if (stored.length === 0) return cfg.defaultSkills;
+
+  // Field-specific keyword sets for relevance check
+  const FIELD_KEYWORDS = {
+    'Computer Science & IT': ['react','node','python','java','javascript','typescript','docker','kubernetes','sql','nosql','aws','gcp','azure','django','flask','spring','mongodb','redis','api','git','linux','html','css','tensorflow','pytorch','ml','ai','devops','ci/cd','golang','rust','kotlin','swift'],
+    'Engineering': ['solidworks','autocad','ansys','matlab','catia','revit','staad','etabs','plc','scada','cad','fea','gd&t','etap','verilog','vhdl','fpga','labview','proteus','3ds max','inventor','creo','nastran'],
+    'Healthcare & Medical': ['patient','clinical','diagnosis','treatment','bls','acls','icu','opd','emr','pharmacology','anatomy','nursing','mbbs','medical','surgery','dental','physiotherapy'],
+    'Business & Management': ['excel','powerpoint','crm','salesforce','jira','confluence','agile','scrum','okr','kpi','analytics','strategy','marketing','seo','google ads','hubspot','tableau','power bi'],
+    'Finance & Accounting': ['excel','bloomberg','tally','sap','quickbooks','financial modeling','valuation','dcf','ifrs','gaap','gst','tds','audit','erp','accounting','oracle financials'],
+    'Design & Creative': ['figma','adobe','photoshop','illustrator','xd','sketch','ux','ui','prototyping','design systems','after effects','premiere','indesign','canva','blender'],
+  };
+
+  const fieldKey = Object.keys(FIELD_KEYWORDS).find(
+    (k) => k.toLowerCase() === (field || '').toLowerCase()
+  );
+
+  if (!fieldKey) return stored.slice(0, 3).join(', ') || cfg.defaultSkills;
+
+  const keywords = FIELD_KEYWORDS[fieldKey];
+  const relevant = stored.filter((sk) =>
+    keywords.some((kw) => sk.toLowerCase().includes(kw))
+  );
+
+  if (relevant.length >= 2) {
+    return relevant.slice(0, 3).join(', ');
+  }
+  // User's stored skills don't match their field — use domain defaults
+  return cfg.defaultSkills;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -575,12 +621,14 @@ function getDomainConfig(field, subfield) {
 export const aiService = {
   /**
    * Generates a professional summary tailored to field, subfield, and career stage.
+   * Uses field-appropriate skills and domain-specific templates.
    */
   async generateSummary({ role, stage, skills, experience, projects, field, subfield }) {
     await delay(900);
     const cfg = getDomainConfig(field, subfield);
-    const topSkills = skills?.technical?.slice(0, 3)?.join(', ') || cfg.defaultSkills;
-    const mainRole = role || `${subfield || field || 'Professional'}`;
+    // Use field-aware skill selection to avoid showing skills from wrong domains
+    const topSkills = pickRelevantSkills(skills, field, subfield, cfg);
+    const mainRole = role || subfield || field || 'Professional';
     const stageKey = (stage === 'Student' || stage === 'Fresher') ? 'fresher'
       : stage === 'Intern' ? 'intern'
         : 'experienced';
