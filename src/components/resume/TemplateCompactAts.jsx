@@ -5,7 +5,7 @@ export const TemplateCompactAts = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
 
   return (
-    <div className="bg-white text-slate-900 font-sans text-[12px] leading-snug max-w-[800px] mx-auto shadow-sm text-left px-8 py-7">
+    <div className="bg-white text-slate-900 font-sans text-[12px] leading-snug max-w-[800px] mx-auto shadow-sm text-left px-6 py-4.5">
       {/* Compact header */}
       <header className="border-b border-slate-900 pb-3 mb-4">
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">

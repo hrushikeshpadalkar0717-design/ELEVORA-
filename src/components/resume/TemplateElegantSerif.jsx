@@ -12,7 +12,7 @@ export const TemplateElegantSerif = ({ data }) => {
       style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
     >
       {/* Centered Name Header */}
-      <header className="pt-8 pb-5 px-10 text-center border-b-2 border-slate-800">
+      <header className="pt-5 pb-3 px-6 text-center border-b-2 border-slate-800">
         <h1
           className="text-4xl font-bold text-slate-900 tracking-tight"
           style={{ fontFamily: "'Georgia', serif", letterSpacing: '0.04em' }}
@@ -67,7 +67,7 @@ export const TemplateElegantSerif = ({ data }) => {
         </div>
       </header>
 
-      <div className="px-10 py-6 space-y-5">
+      <div className="px-6 py-4 space-y-3.5">
         {/* Summary */}
         {careerGoal?.summary && (
           <section>

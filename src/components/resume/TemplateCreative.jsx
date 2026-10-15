@@ -142,7 +142,7 @@ export const TemplateCreative = ({ data }) => {
       </aside>
 
       {/* Right Column (Main Content) */}
-      <main className="flex-1 p-6 sm:p-8 space-y-5">
+      <main className="flex-1 p-5 sm:p-6 space-y-3.5">
         {/* Profile statement */}
         {careerGoal?.summary && (
           <section>

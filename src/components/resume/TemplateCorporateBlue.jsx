@@ -9,17 +9,17 @@ export const TemplateCorporateBlue = ({ data }) => {
   return (
     <div className="bg-white text-slate-800 font-sans text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm text-left">
       {/* Navy Blue Header Banner */}
-      <header className="bg-[#1a3560] px-8 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <header className="bg-[#1a3560] px-6 py-4.5">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
               {profile.fullName || 'Your Name'}
             </h1>
-            <p className="text-blue-200 text-sm font-semibold mt-0.5">
+            <p className="text-blue-200 text-xs sm:text-sm font-semibold mt-0.5">
               {careerGoal?.targetRoles?.[0] || `${profile.field} — ${profile.subfield}`}
             </p>
           </div>
-          <div className="sm:text-right text-[11px] text-blue-200 space-y-1">
+          <div className="sm:text-right text-[11px] text-blue-200 space-y-0.5">
             {profile.email && (
               <p>
                 <a href={`mailto:${profile.email}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
@@ -51,9 +51,9 @@ export const TemplateCorporateBlue = ({ data }) => {
       </header>
 
       {/* Thin accent line */}
-      <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-300" />
+      <div className="h-0.5 bg-gradient-to-r from-blue-600 to-blue-300" />
 
-      <div className="px-8 py-6 space-y-5">
+      <div className="px-6 py-4 space-y-3.5">
         {/* Summary */}
         {careerGoal?.summary && (
           <section>

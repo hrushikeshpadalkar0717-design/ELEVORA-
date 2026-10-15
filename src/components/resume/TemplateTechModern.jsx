@@ -9,12 +9,12 @@ export const TemplateTechModern = ({ data }) => {
   return (
     <div className="bg-white text-slate-800 font-sans text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm text-left">
       {/* Teal Header */}
-      <header className="bg-teal-700 text-white px-8 py-7">
-        <h1 className="text-3xl font-black tracking-tight">{profile.fullName || 'Your Name'}</h1>
-        <p className="text-teal-200 font-semibold text-sm mt-1">
+      <header className="bg-teal-700 text-white px-6 py-4.5">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{profile.fullName || 'Your Name'}</h1>
+        <p className="text-teal-200 font-semibold text-xs sm:text-sm mt-0.5">
           {careerGoal?.targetRoles?.[0] || `${profile.field} — ${profile.subfield}`}
         </p>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-xs text-teal-100">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-teal-100">
           {profile.email && (
             <a href={`mailto:${profile.email}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <Mail className="w-3 h-3 text-teal-300" />
@@ -54,7 +54,7 @@ export const TemplateTechModern = ({ data }) => {
         </div>
       </header>
 
-      <div className="px-8 py-6 space-y-5">
+      <div className="px-6 py-4 space-y-3.5">
         {/* Professional Summary */}
         {careerGoal?.summary && (
           <section>

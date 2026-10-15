@@ -5,9 +5,9 @@ export const TemplateClassic = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
 
   return (
-    <div className="bg-white text-black p-8 sm:p-10 text-left font-serif text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm">
+    <div className="bg-white text-black px-6 py-5 sm:px-8 sm:py-6 text-left font-serif text-xs sm:text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm">
       {/* Centered Classic Header */}
-      <header className="text-center pb-4 mb-6 border-b border-black">
+      <header className="text-center pb-2.5 mb-3.5 border-b border-black">
         <h1 className="text-3xl font-bold tracking-normal uppercase">{profile.fullName || 'John Doe'}</h1>
         <div className="text-xs italic mt-1 font-sans flex flex-wrap justify-center items-center gap-x-2 gap-y-1">
           {profile.email && (

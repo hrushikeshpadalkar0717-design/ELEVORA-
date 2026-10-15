@@ -5,9 +5,9 @@ export const TemplateMinimal = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
 
   return (
-    <div className="bg-white text-slate-800 p-8 sm:p-10 text-left font-sans text-xs leading-relaxed max-w-[800px] mx-auto shadow-sm">
+    <div className="bg-white text-slate-800 px-6 py-5 sm:px-8 sm:py-6 text-left font-sans text-xs leading-relaxed max-w-[800px] mx-auto shadow-sm">
       {/* Minimal Header */}
-      <header className="pb-6 mb-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+      <header className="pb-3 mb-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
         <div>
           <h1 className="text-2xl font-light text-slate-900 tracking-tight">{profile.fullName || 'John Doe'}</h1>
           <p className="text-xs text-slate-500 font-medium tracking-wide uppercase mt-0.5">

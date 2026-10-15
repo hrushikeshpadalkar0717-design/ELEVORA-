@@ -6,18 +6,18 @@ export const TemplateModern = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
 
   return (
-    <div className="bg-white text-slate-800 p-8 sm:p-10 text-left font-sans text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm">
+    <div className="bg-white text-slate-800 px-6 py-5 sm:px-8 sm:py-6 text-left font-sans text-xs sm:text-sm leading-relaxed max-w-[800px] mx-auto shadow-sm">
       {/* Header */}
-      <header className="border-b-2 border-blue-600 pb-5 mb-6">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+      <header className="border-b-2 border-blue-600 pb-3 mb-4">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
           {profile.fullName || 'John Doe'}
         </h1>
-        <p className="text-sm sm:text-base font-semibold text-blue-600 mt-1 tracking-wide">
+        <p className="text-xs sm:text-sm font-semibold text-blue-600 mt-0.5 tracking-wide">
           {careerGoal?.targetRoles?.[0] || `${profile.field} — ${profile.subfield}`}
         </p>
 
         {/* Contact info grid */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3.5 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2.5 text-xs text-slate-600">
           {profile.email && (
             <a
               href={`mailto:${profile.email}`}
@@ -79,8 +79,8 @@ export const TemplateModern = ({ data }) => {
 
       {/* Professional Summary */}
       {careerGoal?.summary && (
-        <section className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-2.5">
+        <section className="mb-3.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-1.5">
             Professional Summary
           </h2>
           <p className="text-xs text-slate-700 leading-relaxed text-justify">{careerGoal.summary}</p>
@@ -89,11 +89,11 @@ export const TemplateModern = ({ data }) => {
 
       {/* Education */}
       {education && education.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-3">
+        <section className="mb-3.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-2">
             Education
           </h2>
-          <div className="space-y-3.5">
+          <div className="space-y-2">
             {education.map((edu) => (
               <div key={edu.id} className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
@@ -118,11 +118,11 @@ export const TemplateModern = ({ data }) => {
 
       {/* Experience */}
       {experience && experience.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-3">
+        <section className="mb-3.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-2">
             Work Experience
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {experience.map((exp) => (
               <div key={exp.id}>
                 <div className="flex justify-between items-start gap-4">
@@ -135,7 +135,7 @@ export const TemplateModern = ({ data }) => {
                   </span>
                 </div>
                 {exp.responsibilities && exp.responsibilities.length > 0 && (
-                  <ul className="list-disc list-outside pl-4 mt-2 space-y-1 text-xs text-slate-600 leading-relaxed">
+                  <ul className="list-disc list-outside pl-4 mt-1.5 space-y-0.5 text-xs text-slate-600 leading-relaxed">
                     {exp.responsibilities.map((resp, i) => (
                       <li key={i}>{resp}</li>
                     ))}
@@ -149,11 +149,11 @@ export const TemplateModern = ({ data }) => {
 
       {/* Projects */}
       {projects && projects.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-3">
+        <section className="mb-3.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-2">
             Key Projects
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {projects.map((proj) => (
               <div key={proj.id} className="pb-1">
                 <div className="flex justify-between items-start gap-4">
@@ -216,23 +216,23 @@ export const TemplateModern = ({ data }) => {
       )}
 
       {/* Skills */}
-      <section className="mb-6">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-3">
+      <section className="mb-3.5">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-2">
           Skills & Languages
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
             <span className="font-bold text-slate-800 block text-xs">Technical Skills</span>
-            <p className="text-slate-600 mt-1 leading-relaxed">{skills?.technical?.join(', ') || 'None added'}</p>
+            <p className="text-slate-600 mt-0.5 leading-relaxed">{skills?.technical?.join(', ') || 'None added'}</p>
           </div>
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+          <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
             <span className="font-bold text-slate-800 block text-xs">Soft Skills</span>
-            <p className="text-slate-600 mt-1 leading-relaxed">{skills?.soft?.join(', ') || 'None added'}</p>
+            <p className="text-slate-600 mt-0.5 leading-relaxed">{skills?.soft?.join(', ') || 'None added'}</p>
           </div>
           {skills?.languages && skills.languages.length > 0 && (
-            <div className="sm:col-span-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+            <div className="sm:col-span-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
               <span className="font-bold text-slate-800 block text-xs">Languages</span>
-              <p className="text-slate-600 mt-1">
+              <p className="text-slate-600 mt-0.5">
                 {skills.languages.map((l) => `${l.name} (${l.proficiency})`).join(', ')}
               </p>
             </div>
@@ -243,7 +243,7 @@ export const TemplateModern = ({ data }) => {
       {/* Certifications & Achievements */}
       {((certifications && certifications.length > 0) || (achievements && achievements.length > 0)) && (
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5 mb-2">
             Certifications & Honors
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">

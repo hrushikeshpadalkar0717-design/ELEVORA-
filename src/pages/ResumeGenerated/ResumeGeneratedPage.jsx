@@ -113,29 +113,44 @@ export const ResumeGeneratedPage = () => {
   ${styleLinks}
   ${inlineStyles}
   <style>
-    @page { size: A4 portrait; margin: 12mm 15mm; }
+    @page {
+      size: A4 portrait;
+      margin: 8mm 8mm;
+    }
     html, body {
       margin: 0;
       padding: 0;
       background: white;
       display: flex;
       justify-content: center;
+      width: 100%;
     }
     #resume-document-to-export {
-      width: 210mm;
-      max-width: 210mm;
-      min-height: 297mm;
+      width: 100%;
+      max-width: 194mm;
+      min-height: auto;
       background: white;
       box-shadow: none;
       border-radius: 0;
       overflow: visible;
+      margin: 0 auto;
     }
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    section { page-break-inside: avoid; break-inside: avoid; }
-    h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+    section, .resume-section {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1, h2, h3 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    ul, li {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
   </style>
 </head>
 <body>

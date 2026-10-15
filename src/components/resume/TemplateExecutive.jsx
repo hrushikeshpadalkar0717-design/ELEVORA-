@@ -8,7 +8,7 @@ export const TemplateExecutive = ({ data }) => {
   return (
     <div className="bg-white text-slate-800 text-left font-sans text-xs leading-relaxed max-w-[800px] mx-auto shadow-sm overflow-hidden">
       {/* Executive Dark Navy Banner */}
-      <header className="bg-[#0b132b] text-white p-8">
+      <header className="bg-[#0b132b] text-white px-6 py-5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">{profile.fullName || 'John Doe'}</h1>
@@ -68,7 +68,7 @@ export const TemplateExecutive = ({ data }) => {
         </div>
       </header>
 
-      <div className="p-8 space-y-6">
+      <div className="px-6 py-4 space-y-3.5">
         {/* Executive Summary */}
         {careerGoal?.summary && (
           <section className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">

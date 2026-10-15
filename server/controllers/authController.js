@@ -176,14 +176,23 @@ export const logoutUser = (req, res) => {
 // @route GET /api/auth/google  — redirects user to Google
 export const googleAuthRedirect = (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientOrigin =
+    req.query.client_url ||
+    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
+    process.env.CLIENT_URL ||
+    'http://localhost:5173';
+
   if (!clientId) {
-    return res.redirect(`${CLIENT_URL}/login?error=google_not_configured`);
+    return res.redirect(`${clientOrigin}/login?error=google_not_configured`);
   }
 
   const state = crypto.randomBytes(24).toString('hex');
-  oauthStates.set(state, { createdAt: Date.now(), provider: 'google' });
+  oauthStates.set(state, { createdAt: Date.now(), provider: 'google', clientOrigin });
 
-  const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+  const callbackUrl =
+    process.env.GOOGLE_CALLBACK_URL ||
+    `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callbackUrl,
@@ -200,19 +209,22 @@ export const googleAuthRedirect = (req, res) => {
 // @route GET /api/auth/google/callback  — Google sends code here
 export const googleCallback = async (req, res) => {
   const { code, state, error } = req.query;
+  const stateData = state ? oauthStates.get(state) : null;
+  const clientUrl = stateData?.clientOrigin || process.env.CLIENT_URL || 'http://localhost:5173';
 
   if (error) {
-    return res.redirect(`${CLIENT_URL}/login?error=google_denied`);
+    if (state) oauthStates.delete(state);
+    return res.redirect(`${clientUrl}/login?error=google_denied`);
   }
 
   // Validate CSRF state
-  if (!state || !oauthStates.has(state)) {
-    return res.redirect(`${CLIENT_URL}/login?error=invalid_oauth_state`);
+  if (!state || !stateData) {
+    return res.redirect(`${clientUrl}/login?error=invalid_oauth_state`);
   }
   oauthStates.delete(state);
 
   if (!code) {
-    return res.redirect(`${CLIENT_URL}/login?error=no_auth_code`);
+    return res.redirect(`${clientUrl}/login?error=no_auth_code`);
   }
 
   try {
@@ -283,10 +295,11 @@ export const googleCallback = async (req, res) => {
     setAuthCookie(res, elevoraToken);
 
     // Redirect to frontend with token in query param (one-time pickup by frontend)
-    return res.redirect(`${CLIENT_URL}/auth/callback?token=${elevoraToken}&provider=google`);
+    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=google`);
   } catch (err) {
     console.error('Google callback error:', err.response?.data || err.message);
-    return res.redirect(`${CLIENT_URL}/login?error=google_auth_failed`);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    return res.redirect(`${clientUrl}/login?error=google_auth_failed`);
   }
 };
 
@@ -295,14 +308,23 @@ export const googleCallback = async (req, res) => {
 // @route GET /api/auth/linkedin  — redirects user to LinkedIn
 export const linkedinAuthRedirect = (req, res) => {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
+  const clientOrigin =
+    req.query.client_url ||
+    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
+    process.env.CLIENT_URL ||
+    'http://localhost:5173';
+
   if (!clientId) {
-    return res.redirect(`${CLIENT_URL}/login?error=linkedin_not_configured`);
+    return res.redirect(`${clientOrigin}/login?error=linkedin_not_configured`);
   }
 
   const state = crypto.randomBytes(24).toString('hex');
-  oauthStates.set(state, { createdAt: Date.now(), provider: 'linkedin' });
+  oauthStates.set(state, { createdAt: Date.now(), provider: 'linkedin', clientOrigin });
 
-  const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/linkedin/callback`;
+  const callbackUrl =
+    process.env.LINKEDIN_CALLBACK_URL ||
+    `${req.protocol}://${req.get('host')}/api/auth/linkedin/callback`;
+
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
@@ -318,26 +340,31 @@ export const linkedinAuthRedirect = (req, res) => {
 // @route GET /api/auth/linkedin/callback  — LinkedIn sends code here
 export const linkedinCallback = async (req, res) => {
   const { code, state, error, error_description } = req.query;
+  const stateData = state ? oauthStates.get(state) : null;
+  const clientUrl = stateData?.clientOrigin || process.env.CLIENT_URL || 'http://localhost:5173';
 
   if (error) {
     console.warn('LinkedIn OAuth error:', error, error_description);
-    return res.redirect(`${CLIENT_URL}/login?error=linkedin_denied`);
+    if (state) oauthStates.delete(state);
+    return res.redirect(`${clientUrl}/login?error=linkedin_denied`);
   }
 
   // Validate CSRF state
-  if (!state || !oauthStates.has(state)) {
-    return res.redirect(`${CLIENT_URL}/login?error=invalid_oauth_state`);
+  if (!state || !stateData) {
+    return res.redirect(`${clientUrl}/login?error=invalid_oauth_state`);
   }
   oauthStates.delete(state);
 
   if (!code) {
-    return res.redirect(`${CLIENT_URL}/login?error=no_auth_code`);
+    return res.redirect(`${clientUrl}/login?error=no_auth_code`);
   }
 
   try {
     const clientId = process.env.LINKEDIN_CLIENT_ID;
     const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
-    const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/linkedin/callback`;
+    const callbackUrl =
+      process.env.LINKEDIN_CALLBACK_URL ||
+      `${req.protocol}://${req.get('host')}/api/auth/linkedin/callback`;
 
     // Exchange code for access token
     const tokenParams = new URLSearchParams({
@@ -356,7 +383,7 @@ export const linkedinCallback = async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
     if (!accessToken) {
-      return res.redirect(`${CLIENT_URL}/login?error=linkedin_no_access_token`);
+      return res.redirect(`${clientUrl}/login?error=linkedin_no_access_token`);
     }
 
     // Fetch user info from LinkedIn OIDC UserInfo endpoint
@@ -368,7 +395,7 @@ export const linkedinCallback = async (req, res) => {
     const liData = userInfoRes.data;
     const linkedinId = liData.sub; // stable provider identifier
     if (!linkedinId) {
-      return res.redirect(`${CLIENT_URL}/login?error=linkedin_no_subject`);
+      return res.redirect(`${clientUrl}/login?error=linkedin_no_subject`);
     }
 
     const email = liData.email ? liData.email.toLowerCase() : null;
@@ -391,7 +418,7 @@ export const linkedinCallback = async (req, res) => {
       if (!user) {
         if (!email) {
           // LinkedIn didn't provide an email — can't create account safely
-          return res.redirect(`${CLIENT_URL}/login?error=linkedin_no_email`);
+          return res.redirect(`${clientUrl}/login?error=linkedin_no_email`);
         }
         user = await User.create({
           fullName,
@@ -414,10 +441,10 @@ export const linkedinCallback = async (req, res) => {
     const elevoraToken = generateToken(user._id);
     setAuthCookie(res, elevoraToken);
 
-    return res.redirect(`${CLIENT_URL}/auth/callback?token=${elevoraToken}&provider=linkedin`);
+    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=linkedin`);
   } catch (err) {
     console.error('LinkedIn callback error:', err.response?.data || err.message);
-    return res.redirect(`${CLIENT_URL}/login?error=linkedin_auth_failed`);
+    return res.redirect(`${clientUrl}/login?error=linkedin_auth_failed`);
   }
 };
 

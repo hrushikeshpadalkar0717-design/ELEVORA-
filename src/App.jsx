@@ -9,6 +9,7 @@ import { AppLayout } from './components/layout/AppLayout';
 // Public Pages
 import { LandingPage } from './pages/Landing/LandingPage';
 import { AuthPage } from './pages/Auth/AuthPage';
+import { AuthCallbackPage } from './pages/Auth/AuthCallbackPage';
 
 // Authenticated Pages
 import { DashboardPage } from './pages/Dashboard/DashboardPage';
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage initialMode="login" />} />
             <Route path="/signup" element={<AuthPage initialMode="signup" />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
             {/* Authenticated Application */}
             <Route element={<AppLayout />}>

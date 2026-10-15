@@ -84,30 +84,27 @@ export const ResumeProvider = ({ children }) => {
           if (parsed.isAuthenticated !== undefined) setIsAuthenticated(parsed.isAuthenticated);
         }
 
-        // Check if user has an active backend session in MongoDB Atlas
-        const authToken = localStorage.getItem('elevora_auth_token');
-        if (authToken) {
-          try {
-            const userData = await api.getMe();
-            if (userData && userData.email) {
-              setIsAuthenticated(true);
-              const norm = normalizeLegacyProfile(userData.field, userData.subfield);
-              setProfile((prev) => ({
-                ...prev,
-                fullName: userData.fullName || prev.fullName,
-                email: userData.email,
-                phone: userData.phone || prev.phone,
-                field: norm.field || prev.field,
-                subfield: norm.subfield || prev.subfield,
-                location: userData.location || prev.location,
-                linkedin: userData.linkedin || prev.linkedin,
-                portfolio: userData.portfolio || prev.portfolio,
-                github: userData.github || prev.github,
-                avatar: userData.avatar || prev.avatar,
-              }));
-              if (userData.careerGoal) {
-                setCareerGoal((prev) => ({ ...prev, ...userData.careerGoal }));
-              }
+        // Check if user has an active backend session in MongoDB Atlas (via HttpOnly cookie or localStorage token)
+        try {
+          const userData = await api.getMe();
+          if (userData && userData.email) {
+            setIsAuthenticated(true);
+            const norm = normalizeLegacyProfile(userData.field, userData.subfield);
+            setProfile((prev) => ({
+              ...prev,
+              fullName: userData.fullName || prev.fullName,
+              email: userData.email,
+              phone: userData.phone || prev.phone,
+              field: norm.field || prev.field,
+              subfield: norm.subfield || prev.subfield,
+              location: userData.location || prev.location,
+              linkedin: userData.linkedin || prev.linkedin,
+              portfolio: userData.portfolio || prev.portfolio,
+              github: userData.github || prev.github,
+              avatar: userData.avatar || prev.avatar,
+            }));
+            if (userData.careerGoal) {
+              setCareerGoal((prev) => ({ ...prev, ...userData.careerGoal }));
             }
 
             // Also load saved resumes from MongoDB
@@ -115,9 +112,13 @@ export const ResumeProvider = ({ children }) => {
             if (Array.isArray(dbResumes) && dbResumes.length > 0) {
               setSavedResumes(dbResumes);
             }
-          } catch (apiErr) {
-            console.log('Backend sync offline/fallback mode:', apiErr.message);
           }
+        } catch (apiErr) {
+          // If server says not authenticated, ensure local storage and state reflect logged out
+          if (localStorage.getItem('elevora_auth_token')) {
+            localStorage.removeItem('elevora_auth_token');
+          }
+          setIsAuthenticated(false);
         }
       } catch (err) {
         console.error('Error loading stored state:', err);
@@ -169,36 +170,45 @@ export const ResumeProvider = ({ children }) => {
 
   // Auth methods with MongoDB Atlas integration
   const login = async (userData) => {
-    setIsAuthenticated(true);
-    let serverUser = null;
-    try {
-      if (userData?.email && userData?.password) {
-        serverUser = await api.login({ email: userData.email, password: userData.password });
-      }
-    } catch (err) {
-      console.warn('API login notice:', err.message);
+    if (!userData?.email || !userData?.password) {
+      throw new Error('Please enter both email and password');
     }
 
-    setProfile((prev) => {
-      const updated = {
-        ...prev,
-        email: serverUser?.email || userData?.email || prev.email,
-        fullName: serverUser?.fullName || userData?.fullName || prev.fullName,
-        phone: serverUser?.phone || userData?.phone || prev.phone,
-        field: serverUser?.field || userData?.field || prev.field,
-        subfield: serverUser?.subfield || userData?.subfield || prev.subfield,
-        avatar: serverUser?.avatar || userData?.avatar || prev.avatar,
-      };
-      return updated;
-    });
+    // Call backend API — throws on 400/401/500 so wrong credentials are not bypassed
+    const serverUser = await api.login({ email: userData.email, password: userData.password });
+
+    setIsAuthenticated(true);
+    const norm = normalizeLegacyProfile(serverUser?.field, serverUser?.subfield);
+    setProfile((prev) => ({
+      ...prev,
+      email: serverUser?.email || userData.email,
+      fullName: serverUser?.fullName || prev.fullName,
+      phone: serverUser?.phone || prev.phone,
+      field: norm.field || prev.field,
+      subfield: norm.subfield || prev.subfield,
+      avatar: serverUser?.avatar || prev.avatar,
+    }));
 
     if (serverUser?.careerGoal) {
       setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
     }
+
+    try {
+      const dbResumes = await api.getResumes();
+      if (Array.isArray(dbResumes) && dbResumes.length > 0) {
+        setSavedResumes(dbResumes);
+      }
+    } catch (e) {
+      console.warn('Resume load notice on login:', e.message);
+    }
+
+    return serverUser;
   };
 
   const signup = async (userData) => {
-    setIsAuthenticated(true);
+    if (!userData?.email || !userData?.password) {
+      throw new Error('Email and password are required');
+    }
     const normalized = normalizeLegacyProfile(
       userData.field || '',
       userData.subfield || ''
@@ -213,21 +223,19 @@ export const ResumeProvider = ({ children }) => {
       subfield: normalized.subfield,
     };
 
-    let serverUser = null;
-    try {
-      serverUser = await api.register(payload);
-    } catch (err) {
-      console.warn('Backend registration notice:', err.message);
-    }
+    const serverUser = await api.register(payload);
+    setIsAuthenticated(true);
 
     setProfile((prev) => ({
       ...prev,
-      fullName: serverUser?.fullName || payload.fullName || prev.fullName,
-      email: serverUser?.email || payload.email || prev.email,
-      phone: serverUser?.phone || payload.phone || prev.phone,
-      field: serverUser?.field || payload.field || prev.field,
-      subfield: serverUser?.subfield || payload.subfield || prev.subfield,
+      fullName: serverUser?.fullName || payload.fullName,
+      email: serverUser?.email || payload.email,
+      phone: serverUser?.phone || payload.phone,
+      field: serverUser?.field || payload.field,
+      subfield: serverUser?.subfield || payload.subfield,
     }));
+
+    return serverUser;
   };
 
   const googleLogin = async (payload) => {
@@ -289,8 +297,54 @@ export const ResumeProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const loginWithToken = async (token) => {
+    if (token) {
+      localStorage.setItem('elevora_auth_token', token);
+    }
+    const serverUser = await api.getMe();
+    if (!serverUser || !serverUser.email) {
+      throw new Error('Failed to retrieve user profile');
+    }
+
+    setIsAuthenticated(true);
+    const norm = normalizeLegacyProfile(serverUser.field, serverUser.subfield);
+    setProfile((prev) => ({
+      ...prev,
+      fullName: serverUser.fullName || prev.fullName,
+      email: serverUser.email,
+      phone: serverUser.phone || prev.phone,
+      field: norm.field || prev.field,
+      subfield: norm.subfield || prev.subfield,
+      location: serverUser.location || prev.location,
+      linkedin: serverUser.linkedin || prev.linkedin,
+      portfolio: serverUser.portfolio || prev.portfolio,
+      github: serverUser.github || prev.github,
+      avatar: serverUser.avatar || prev.avatar,
+    }));
+
+    if (serverUser.careerGoal) {
+      setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
+    }
+
+    try {
+      const dbResumes = await api.getResumes();
+      if (Array.isArray(dbResumes) && dbResumes.length > 0) {
+        setSavedResumes(dbResumes);
+      }
+    } catch (e) {
+      console.warn('Resume sync notice:', e.message);
+    }
+
+    return serverUser;
+  };
+
+  const logout = async () => {
     setIsAuthenticated(false);
+    try {
+      await api.logout();
+    } catch (e) {
+      console.warn('Logout notice:', e.message);
+    }
     localStorage.removeItem('elevora_auth_token');
   };
 
@@ -586,6 +640,7 @@ export const ResumeProvider = ({ children }) => {
         isAuthenticated,
         login,
         signup,
+        loginWithToken,
         googleLogin,
         linkedinLogin,
         uploadAndApplyResume,

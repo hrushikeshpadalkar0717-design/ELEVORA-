@@ -17,18 +17,21 @@ export const api = {
   // Check Backend Health
   async checkHealth() {
     try {
-      const res = await fetch(`${API_BASE_URL}/health`);
+      const res = await fetch(`${API_BASE_URL}/health`, {
+        credentials: 'include',
+      });
       return await res.json();
     } catch {
       return { status: 'offline' };
     }
   },
 
-  // Auth: Register
+  // Auth: Register (Local)
   async register(userData) {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(userData),
     });
     const data = await res.json();
@@ -39,11 +42,12 @@ export const api = {
     return data;
   },
 
-  // Auth: Login
+  // Auth: Login (Local)
   async login(credentials) {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
     const data = await res.json();
@@ -54,42 +58,41 @@ export const api = {
     return data;
   },
 
-  // Auth: Google Login
-  async googleAuth(payload) {
-    const res = await fetch(`${API_BASE_URL}/auth/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Google authentication failed');
-    if (data.token) {
-      localStorage.setItem('elevora_auth_token', data.token);
+  // Auth: Logout (Clears HttpOnly cookie & local token)
+  async logout() {
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.warn('Logout server notice:', err.message);
+    } finally {
+      localStorage.removeItem('elevora_auth_token');
     }
-    return data;
+    return { success: true };
   },
 
-  // Auth: LinkedIn Login
-  async linkedinAuth(payload) {
-    const res = await fetch(`${API_BASE_URL}/auth/linkedin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'LinkedIn authentication failed');
-    if (data.token) {
-      localStorage.setItem('elevora_auth_token', data.token);
-    }
-    return data;
+  // OAuth: URL Generators for Authorization Code Flow
+  getGoogleAuthUrl(clientOrigin = window.location.origin) {
+    return `${API_BASE_URL}/auth/google?client_url=${encodeURIComponent(clientOrigin)}`;
+  },
+
+  getLinkedInAuthUrl(clientOrigin = window.location.origin) {
+    return `${API_BASE_URL}/auth/linkedin?client_url=${encodeURIComponent(clientOrigin)}`;
   },
 
   // Auth: Get Current Profile
   async getMe() {
     const res = await fetch(`${API_BASE_URL}/auth/me`, {
       headers: getAuthHeaders(),
+      credentials: 'include',
     });
-    if (!res.ok) throw new Error('Not authenticated');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || 'Not authenticated');
+    }
     return await res.json();
   },
 
@@ -98,6 +101,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/auth/profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(profileData),
     });
     const data = await res.json();
@@ -109,6 +113,7 @@ export const api = {
   async getResumes() {
     const res = await fetch(`${API_BASE_URL}/resumes`, {
       headers: getAuthHeaders(),
+      credentials: 'include',
     });
     if (!res.ok) throw new Error('Failed to fetch resumes');
     return await res.json();
@@ -119,6 +124,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/resumes`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(resumeData),
     });
     const data = await res.json();
@@ -131,6 +137,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/resumes/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(resumeData),
     });
     const data = await res.json();
@@ -143,6 +150,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/resumes/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
+      credentials: 'include',
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to delete resume');
@@ -160,6 +168,7 @@ export const api = {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      credentials: 'include',
       body: formData,
     });
 

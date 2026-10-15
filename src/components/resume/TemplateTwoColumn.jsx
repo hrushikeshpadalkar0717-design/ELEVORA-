@@ -133,7 +133,7 @@ export const TemplateTwoColumn = ({ data }) => {
       </aside>
 
       {/* Right column — main content */}
-      <main className="flex-1 p-6 space-y-4">
+      <main className="flex-1 p-5 space-y-3">
         {/* Summary */}
         {careerGoal?.summary && (
           <section>

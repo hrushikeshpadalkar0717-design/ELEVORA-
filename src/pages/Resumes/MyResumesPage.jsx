@@ -401,6 +401,28 @@ export const MyResumesPage = () => {
           </Button>
         </div>
       </Modal>
+
+      {/* Off-screen container for quick PDF export from resume cards */}
+      {exportTargetResume && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: 0,
+            width: '800px',
+            opacity: 0,
+            pointerEvents: 'none',
+            zIndex: -100,
+          }}
+        >
+          <ResumePreview
+            id="quick-export-resume-doc"
+            template={exportTargetResume.template || 'modern'}
+            customData={exportTargetResume}
+          />
+        </div>
+      )}
     </div>
   );
 };

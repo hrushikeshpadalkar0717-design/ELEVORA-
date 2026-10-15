@@ -66,12 +66,43 @@ app.use((err, req, res, next) => {
 // Port and Startup
 const PORT = process.env.PORT || 5000;
 
+// Validate Environment Variables on Startup
+function validateEnv() {
+  console.log('──────────────────────────────────────────────────────');
+  console.log('🔍 Validating Authentication & Environment Variables:');
+
+  const dbConfigured = !!(process.env.MONGODB_URI || process.env.MONGO_URI);
+  console.log(`  • Database URI (MongoDB Atlas): ${dbConfigured ? '✅ CONFIGURED' : '❌ MISSING (Required)'}`);
+
+  const jwtConfigured = !!process.env.JWT_SECRET;
+  console.log(`  • JWT Secret:                   ${jwtConfigured ? '✅ CONFIGURED' : '⚠️ USING FALLBACK (Recommended to set JWT_SECRET)'}`);
+
+  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  console.log(`  • Google OAuth (OIDC):          ${googleConfigured ? '✅ CONFIGURED' : '⚠️ NOT CONFIGURED (Google Login disabled)'}`);
+
+  const linkedinConfigured = !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
+  console.log(`  • LinkedIn OAuth (OIDC):        ${linkedinConfigured ? '✅ CONFIGURED' : '⚠️ NOT CONFIGURED (LinkedIn Login disabled)'}`);
+
+  console.log(`  • Client Origin:                ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
+  console.log('──────────────────────────────────────────────────────');
+}
+
 // Connect to MongoDB Atlas and start server
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  validateEnv();
+  const server = app.listen(PORT, () => {
     console.log(`🚀 ELEVORA Backend running on http://localhost:${PORT}`);
     console.log(`📡 Health: http://localhost:${PORT}/api/health`);
     console.log(`🔐 Google Callback: http://localhost:${PORT}/api/auth/google/callback`);
     console.log(`🔗 LinkedIn Callback: http://localhost:${PORT}/api/auth/linkedin/callback`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use by another running process.`);
+      console.warn(`💡 Tip: Close the existing server instance or kill the process using port ${PORT}.`);
+    } else {
+      console.error('❌ Server startup error:', err.message);
+    }
   });
 });
