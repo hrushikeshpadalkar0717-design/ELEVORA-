@@ -18,6 +18,7 @@ import { EditResumePage } from './pages/EditResume/EditResumePage';
 import { InterviewPrepPage } from './pages/InterviewPrep/InterviewPrepPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { ResumeGeneratedPage } from './pages/ResumeGenerated/ResumeGeneratedPage';
+import { PricingPage } from './pages/Pricing/PricingPage';
 
 // Multi-step Resume Creation
 import { CreateResumeLayout } from './pages/CreateResume/CreateResumeLayout';
@@ -69,6 +70,7 @@ export default function App() {
               {/* Feature Pages */}
               <Route path="/interview-prep" element={<InterviewPrepPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
             </Route>
 
             {/* Catch-all */}

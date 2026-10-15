@@ -108,7 +108,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
               Get access to premium templates, advanced AI suggestions and more.
             </p>
             <button
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/pricing')}
               className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
             >
               <span>Go Pro</span>

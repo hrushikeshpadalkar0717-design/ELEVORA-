@@ -1,9 +1,11 @@
+import { getRoles, normalizeLegacyProfile } from './careerTaxonomy';
+
 export const initialProfile = {
   fullName: 'John Doe',
   email: 'john.doe@example.com',
   phone: '+91 98765 43210',
   field: 'Engineering',
-  subfield: 'Mechanical Engineering',
+  subfield: 'Mechanical',
   location: 'Pune, Maharashtra',
   linkedin: 'https://linkedin.com/in/johndoe',
   portfolio: 'https://johndoe.dev',
@@ -17,9 +19,9 @@ export const initialCareerGoal = {
   targetRoles: [
     'Mechanical Design Engineer',
     'CAD Engineer',
-    'R&D Engineer'
+    'Manufacturing Engineer'
   ],
-  summary: 'Seeking a challenging role in Mechanical Design to apply my technical skills, 3D CAD modeling expertise, and contribute to innovative engineering solutions.'
+  summary: 'Seeking a challenging role in Mechanical Engineering to apply my technical skills, 3D CAD modeling expertise, and contribute to innovative engineering solutions.'
 };
 
 export const initialEducation = [
@@ -49,6 +51,8 @@ export const initialProjects = [
       'Automated reporting and alerting dashboard',
       'Integrated CAD component verification'
     ],
+    github: 'https://github.com/johndoe/smart-inspection',
+    liveUrl: 'https://smart-inspection-demo.vercel.app',
     link: 'https://github.com/johndoe/smart-inspection'
   },
   {
@@ -63,6 +67,8 @@ export const initialProjects = [
       'Reduced total chassis weight by 18% while maintaining torsional rigidity',
       'Conducted stress and crash safety analysis according to SAE standards'
     ],
+    github: 'https://github.com/johndoe/go-kart-chassis',
+    liveUrl: '',
     link: ''
   }
 ];
@@ -100,14 +106,16 @@ export const initialCertifications = [
     name: 'SolidWorks Professional (CSWP)',
     issuer: 'Dassault Systèmes',
     date: 'Jan 2023',
-    credentialId: 'C-987124'
+    credentialId: 'C-987124',
+    link: 'https://www.solidworks.com/certifications/cswp'
   },
   {
     id: 'cert-2',
     name: 'AutoCAD Certified User',
     issuer: 'Autodesk',
     date: 'Aug 2022',
-    credentialId: 'ACU-55219'
+    credentialId: 'ACU-55219',
+    link: 'https://www.autodesk.com/certification'
   }
 ];
 
@@ -131,6 +139,8 @@ export const initialSavedResumes = [
     id: 'res-1',
     name: 'Mechanical Design Engineer Resume',
     targetRole: 'Mechanical Design Engineer',
+    field: 'Engineering',
+    subfield: 'Mechanical',
     template: 'modern',
     lastUpdated: 'Just now',
     atsScore: 92,
@@ -141,6 +151,8 @@ export const initialSavedResumes = [
     id: 'res-2',
     name: 'CAD & Simulation Specialist Resume',
     targetRole: 'CAD Engineer',
+    field: 'Engineering',
+    subfield: 'Mechanical',
     template: 'classic',
     lastUpdated: '2 days ago',
     atsScore: 89,
@@ -149,8 +161,10 @@ export const initialSavedResumes = [
   },
   {
     id: 'res-3',
-    name: 'R&D Automotive Resume',
-    targetRole: 'R&D Engineer',
+    name: 'Manufacturing Engineer Resume',
+    targetRole: 'Manufacturing Engineer',
+    field: 'Engineering',
+    subfield: 'Mechanical',
     template: 'executive',
     lastUpdated: '1 week ago',
     atsScore: 95,
@@ -607,19 +621,11 @@ export const rolesByField = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  HELPER: returns roles array for a given field + subfield from user profile.
-//  Falls back gracefully:  subfield → field _default → generic fallback
+//  HELPER: getRolesForProfile — thin wrapper around careerTaxonomy
+//  Retained for backwards compatibility; all new code should use careerTaxonomy.
 // ─────────────────────────────────────────────────────────────────────────────
-export const getRolesForProfile = (field = '', subfield = '') => {
-  const fieldData = rolesByField[field];
-  if (!fieldData) {
-    // Field not in map – return generic professional roles
-    return [
-      'Analyst', 'Consultant', 'Manager', 'Specialist', 'Executive',
-      'Coordinator', 'Research Associate', 'Team Lead', 'Project Manager', 'Other'
-    ];
-  }
-  // Try exact subfield match first, then fall back to _default
-  return fieldData[subfield] || fieldData['_default'] || ['Other'];
-};
 
+export const getRolesForProfile = (field = '', subfield = '') => {
+  const { field: f, subfield: s } = normalizeLegacyProfile(field, subfield);
+  return getRoles(f, s);
+};

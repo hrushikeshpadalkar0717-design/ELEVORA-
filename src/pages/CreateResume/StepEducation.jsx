@@ -43,12 +43,12 @@ export const StepEducation = () => {
     setEditingItem(null);
     setEduForm({
       degree: 'High School (12th)',
-      branch: 'Science',
+      branch: '',
       college: '',
       location: '',
-      startYear: '2018',
-      graduationYear: '2020',
-      score: '88%',
+      startYear: '',
+      graduationYear: '',
+      score: '',
     });
     setIsAddModalOpen(true);
   };
@@ -85,12 +85,12 @@ export const StepEducation = () => {
 
   const primaryEdu = education[0] || {
     degree: 'B.Tech / B.E.',
-    branch: 'Mechanical Engineering',
-    college: 'ABC College of Engineering',
-    location: 'Pune, Maharashtra',
-    startYear: '2020',
-    graduationYear: '2024',
-    score: '8.5'
+    branch: '',
+    college: '',
+    location: '',
+    startYear: '',
+    graduationYear: '',
+    score: ''
   };
 
   return (

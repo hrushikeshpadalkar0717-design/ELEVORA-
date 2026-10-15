@@ -41,6 +41,32 @@ export const exportToPdf = async (elementId, filename = 'Resume.pdf') => {
       heightLeft -= pageHeight;
     }
 
+    // Embed clickable hyperlinks directly into PDF pages
+    const elemRect = element.getBoundingClientRect();
+    const links = element.querySelectorAll('a[href]');
+
+    const scaleX = imgWidth / elemRect.width;
+    const scaleY = imgHeight / elemRect.height;
+
+    links.forEach((a) => {
+      const href = a.getAttribute('href');
+      if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+      const rect = a.getBoundingClientRect();
+      const xMm = (rect.left - elemRect.left) * scaleX;
+      const yMm = (rect.top - elemRect.top) * scaleY;
+      const wMm = rect.width * scaleX;
+      const hMm = rect.height * scaleY;
+
+      const pageIndex = Math.floor(yMm / pageHeight);
+      const yOnPage = yMm - pageIndex * pageHeight;
+
+      if (pageIndex + 1 <= pdf.getNumberOfPages()) {
+        pdf.setPage(pageIndex + 1);
+        pdf.link(xMm, yOnPage, Math.max(wMm, 4), Math.max(hMm, 3), { url: href });
+      }
+    });
+
     pdf.save(filename);
   } catch (error) {
     console.error('PDF export error, falling back to print:', error);

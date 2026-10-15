@@ -38,10 +38,90 @@
 
 /* Print styling for resume generation */
 @media print {
-  body {
+  /* Reset body for print */
+  html, body {
     background: white !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
+
+  /* Hide ALL application chrome */
+  aside,
+  nav,
+  header,
+  [class*='TopNav'],
+  [class*='Sidebar'],
+  .no-print,
+  /* sidebar and top-nav wrappers */
+  .lg\:pl-64,
+  /* quick-actions card column */
+  .space-y-4:has(h3),
+  /* page banners and ATS card sections above the grid */
+  .space-y-8 > div:not(.grid),
+  .space-y-8 > .space-y-3,
+  /* download buttons row at the top */
+  .flex.flex-col.md\:flex-row,
+  /* modal backdrops */
+  [role='dialog'],
+  .fixed {
+    display: none !important;
+  }
+
+  /* Show only the resume document */
+  #resume-document-to-export {
+    display: block !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    page-break-after: auto !important;
+  }
+
+  /* The wrapping preview container must be transparent */
+  #resume-document-to-export * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Remove outer wrapper backgrounds */
+  .bg-slate-100\/70,
+  .bg-\[\#f4f7fc\] {
+    background: white !important;
+  }
+
+  /* Prevent page breaks inside key resume sections */
+  section, .resume-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  ul, li {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* A4 page setup */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
   .no-print {
     display: none !important;
   }

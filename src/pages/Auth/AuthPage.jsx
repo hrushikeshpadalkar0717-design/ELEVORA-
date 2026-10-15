@@ -16,11 +16,12 @@ import { Button } from '../../components/common/Button';
 import { Input, Select } from '../../components/common/Input';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
+import { MAIN_FIELDS, getSubfields, getFieldDisplayLabel } from '../../data/careerTaxonomy';
 
 export const AuthPage = ({ initialMode = 'signup' }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signup } = useResume();
+  const { login, signup, googleLogin } = useResume();
   const { showToast } = useToast();
 
   const isSignUpDefault = initialMode === 'signup' || location.pathname.includes('signup');
@@ -32,7 +33,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
     email: '',
     phone: '',
     field: 'Engineering',
-    subfield: 'Mechanical Engineering',
+    subfield: 'CSE',
     password: '',
   });
 
@@ -42,48 +43,61 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
     password: '',
   });
 
-  const fieldOptions = [
-    'Engineering',
-    'Computer Science & IT',
-    'Business & Management',
-    'Design & Creative',
-    'Finance & Accounting',
-    'Healthcare & Science'
-  ];
+  // Build field options using emoji labels from taxonomy
+  const fieldOptions = MAIN_FIELDS.map((f) => getFieldDisplayLabel(f));
 
-  const subfieldMap = {
-    'Engineering': ['Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'Aerospace Engineering'],
-    'Computer Science & IT': ['Software Development', 'Data Science & AI', 'DevOps & Cloud', 'Cybersecurity'],
-    'Business & Management': ['Product Management', 'Marketing & Sales', 'Operations', 'Human Resources'],
-    'Design & Creative': ['UI/UX Design', 'Graphic Design', 'Motion Design', 'Industrial Design'],
-    'Finance & Accounting': ['Financial Analyst', 'Auditing', 'Investment Banking'],
-    'Healthcare & Science': ['Biotechnology', 'Clinical Research', 'Pharmacy']
-  };
+  // Map display label back to raw key
+  const rawFieldFromDisplay = (display) =>
+    MAIN_FIELDS.find((f) => getFieldDisplayLabel(f) === display) || display;
 
-  const handleSignUp = (e) => {
+  // Subfields for the currently selected field (raw key)
+  const currentSubfields = getSubfields(signUpForm.field);
+
+  const handleSignUp = async (e) => {
     e.preventDefault();
     if (!signUpForm.fullName.trim() || !signUpForm.email.trim()) {
       showToast('Please enter your full name and email', 'error');
       return;
     }
-    signup(signUpForm);
-    showToast('Account created successfully! Welcome to ELEVORA.', 'success');
-    navigate('/dashboard');
+    if (!signUpForm.password || signUpForm.password.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      return;
+    }
+    try {
+      await signup(signUpForm);
+      showToast('Account created successfully! Welcome to ELEVORA.', 'success');
+      navigate('/dashboard');
+    } catch (err) {
+      showToast(err.message || 'Error signing up', 'error');
+    }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!loginForm.email.trim()) {
       showToast('Please enter your email', 'error');
       return;
     }
-    login({ email: loginForm.email, fullName: signUpForm.fullName || 'User' });
-    showToast('Welcome back to ELEVORA!', 'success');
-    navigate('/dashboard');
+    try {
+      await login({ email: loginForm.email, password: loginForm.password });
+      showToast('Welcome back to ELEVORA!', 'success');
+      navigate('/dashboard');
+    } catch (err) {
+      showToast(err.message || 'Login failed', 'error');
+    }
   };
 
   const handleSocialAuth = (provider) => {
-    login({ email: `user@${provider.toLowerCase()}.com`, fullName: 'New User' });
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (provider === 'Google' && googleClientId) {
+      const redirectUri = window.location.origin + '/login';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=openid%20email%20profile&prompt=select_account`;
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Default social authentication
+    login({ email: `user@${provider.toLowerCase()}.com`, fullName: `${provider} User` });
     showToast(`Logged in via ${provider}!`, 'success');
     navigate('/dashboard');
   };
@@ -205,14 +219,24 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                 icon={Phone}
               />
 
+              <Input
+                label="Create Password"
+                type="password"
+                value={signUpForm.password}
+                onChange={(e) => setSignUpForm({ ...signUpForm, password: e.target.value })}
+                placeholder="••••••••"
+                icon={Lock}
+                required
+              />
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Select
                   label="Select Field"
-                  value={signUpForm.field}
+                  value={getFieldDisplayLabel(signUpForm.field)}
                   onChange={(e) => {
-                    const newField = e.target.value;
-                    const defaultSub = subfieldMap[newField]?.[0] || 'General';
-                    setSignUpForm({ ...signUpForm, field: newField, subfield: defaultSub });
+                    const rawField = rawFieldFromDisplay(e.target.value);
+                    const firstSub = getSubfields(rawField)[0] || 'CSE';
+                    setSignUpForm({ ...signUpForm, field: rawField, subfield: firstSub });
                   }}
                   options={fieldOptions}
                 />
@@ -221,7 +245,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                   label="Select Sub-field"
                   value={signUpForm.subfield}
                   onChange={(e) => setSignUpForm({ ...signUpForm, subfield: e.target.value })}
-                  options={subfieldMap[signUpForm.field] || ['General']}
+                  options={currentSubfields}
                 />
               </div>
 

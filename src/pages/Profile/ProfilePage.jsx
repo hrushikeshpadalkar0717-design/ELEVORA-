@@ -15,17 +15,21 @@ import {
 import { LinkedinIcon, GithubIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
+import { MAIN_FIELDS, getSubfields, getFieldDisplayLabel, normalizeLegacyProfile } from '../../data/careerTaxonomy';
 
 export const ProfilePage = () => {
   const { profile, updateProfile, careerGoal, updateCareerGoal } = useResume();
   const { showToast } = useToast();
 
+  // Ensure stored profile values are normalized before populating the form
+  const normalized = normalizeLegacyProfile(profile.field || '', profile.subfield || '');
+
   const [formData, setFormData] = useState({
     fullName: profile.fullName || '',
     email: profile.email || '',
     phone: profile.phone || '',
-    field: profile.field || 'Engineering',
-    subfield: profile.subfield || 'Mechanical Engineering',
+    field: normalized.field,
+    subfield: normalized.subfield,
     location: profile.location || 'Pune, Maharashtra',
     linkedin: profile.linkedin || '',
     portfolio: profile.portfolio || '',
@@ -128,17 +132,23 @@ export const ProfilePage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <Input
-              label="Engineering Field"
+            <Select
+              label="Main Field"
               name="field"
-              value={formData.field}
-              onChange={handleChange}
+              value={getFieldDisplayLabel(formData.field)}
+              onChange={(e) => {
+                const rawField = MAIN_FIELDS.find((f) => getFieldDisplayLabel(f) === e.target.value) || e.target.value;
+                const firstSub = getSubfields(rawField)[0] || '';
+                setFormData((prev) => ({ ...prev, field: rawField, subfield: firstSub }));
+              }}
+              options={MAIN_FIELDS.map((f) => getFieldDisplayLabel(f))}
             />
-            <Input
-              label="Specialization / Sub-field"
+            <Select
+              label="Sub-field / Specialization"
               name="subfield"
               value={formData.subfield}
-              onChange={handleChange}
+              onChange={(e) => setFormData((prev) => ({ ...prev, subfield: e.target.value }))}
+              options={getSubfields(formData.field)}
             />
           </div>
 

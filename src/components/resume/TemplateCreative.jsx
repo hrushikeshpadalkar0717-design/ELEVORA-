@@ -1,5 +1,7 @@
 import React from 'react';
-import { Mail, Phone, MapPin, Globe, Sparkles } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe, Sparkles, ExternalLink } from 'lucide-react';
+import { LinkedinIcon, GithubIcon } from '../common/BrandIcons';
+import { ensureUrl, formatDisplayUrl } from '../../utils/linkUtils';
 
 export const TemplateCreative = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
@@ -19,23 +21,41 @@ export const TemplateCreative = ({ data }) => {
           </p>
 
           <div className="mt-6 space-y-2 text-[11px] text-slate-300">
-            <div className="flex items-center gap-2">
-              <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span className="truncate">{profile.email}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span>{profile.phone}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span>{profile.location}</span>
-            </div>
-            {profile.portfolio && (
+            {profile.email && (
+              <a href={`mailto:${profile.email}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+                <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="truncate">{profile.email}</span>
+              </a>
+            )}
+            {profile.phone && (
               <div className="flex items-center gap-2">
-                <Globe className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span className="truncate">{profile.portfolio.replace(/^https?:\/\//, '')}</span>
+                <Phone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>{profile.phone}</span>
               </div>
+            )}
+            {profile.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>{profile.location}</span>
+              </div>
+            )}
+            {profile.linkedin && (
+              <a href={ensureUrl(profile.linkedin)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors">
+                <LinkedinIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="truncate">{formatDisplayUrl(profile.linkedin)}</span>
+              </a>
+            )}
+            {profile.portfolio && (
+              <a href={ensureUrl(profile.portfolio)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors">
+                <Globe className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="truncate">{formatDisplayUrl(profile.portfolio)}</span>
+              </a>
+            )}
+            {profile.github && (
+              <a href={ensureUrl(profile.github)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors">
+                <GithubIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="truncate">{formatDisplayUrl(profile.github)}</span>
+              </a>
             )}
           </div>
 
@@ -54,18 +74,48 @@ export const TemplateCreative = ({ data }) => {
           </div>
 
           {/* Soft Skills */}
-          <div className="mt-6">
-            <h3 className="text-[11px] font-bold text-white uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">
-              Strengths
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {skills?.soft?.map((s) => (
-                <span key={s} className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">
-                  {s}
-                </span>
-              ))}
+          {skills?.soft && skills.soft.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">
+                Strengths
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {skills.soft.map((s) => (
+                  <span key={s} className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">
+                    {s}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Certifications in sidebar */}
+          {certifications && certifications.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">
+                Certifications
+              </h3>
+              <div className="space-y-1.5 text-[10px]">
+                {certifications.map((c) => (
+                  <div key={c.id}>
+                    <p className="font-semibold text-white">{c.name}</p>
+                    <p className="text-slate-400 text-[9px]">{c.issuer} ({c.date})</p>
+                    {(c.link || c.url) && (
+                      <a
+                        href={ensureUrl(c.link || c.url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-300 hover:text-white underline text-[9px] inline-flex items-center gap-0.5 mt-0.5"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                        <span>View Certificate</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Languages */}
           {skills?.languages?.length > 0 && (
@@ -147,7 +197,35 @@ export const TemplateCreative = ({ data }) => {
                   </div>
                   <p className="text-slate-600 text-[11px] mt-0.5">{proj.description}</p>
                   {proj.technologies && (
-                    <p className="text-[10px] text-indigo-600 font-medium mt-1">Tech: {proj.technologies.join(', ')}</p>
+                    <p className="text-[10px] text-indigo-600 font-medium mt-1">Tech: {Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies}</p>
+                  )}
+                  {(proj.github || proj.liveUrl || proj.link) && (
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] font-semibold">
+                      {(proj.github || (proj.link && proj.link.includes('github'))) && (
+                        <a
+                          href={ensureUrl(proj.github || proj.link)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline"
+                        >
+                          <GithubIcon className="w-2.5 h-2.5" />
+                          <span>GitHub</span>
+                          <ExternalLink className="w-2 h-2 opacity-70" />
+                        </a>
+                      )}
+                      {(proj.liveUrl || (proj.link && !proj.link.includes('github'))) && (
+                        <a
+                          href={ensureUrl(proj.liveUrl || proj.link)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-800 hover:underline"
+                        >
+                          <Globe className="w-2.5 h-2.5" />
+                          <span>Live Demo</span>
+                          <ExternalLink className="w-2 h-2 opacity-70" />
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

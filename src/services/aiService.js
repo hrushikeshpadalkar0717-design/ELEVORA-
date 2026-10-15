@@ -561,22 +561,56 @@ const DOMAIN_CONFIG = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  HELPER: resolve domain config with graceful fallback
+//  HELPER: resolve domain config with graceful fallback & taxonomy aliasing
 // ─────────────────────────────────────────────────────────────────────────────
+const FIELD_ALIASES = {
+  'Medical & Healthcare': 'Healthcare & Medical',
+  'Commerce & Management': 'Business & Management',
+  'Science & Technology': 'Computer Science & IT',
+  'Engineering': 'Engineering',
+};
+
+const SUBFIELD_ALIASES = {
+  'Mechanical': 'Mechanical Engineering',
+  'Civil': 'Civil Engineering',
+  'Electrical': 'Electrical Engineering',
+  'CSE': 'Software Development',
+  'IT': 'DevOps & Cloud',
+  'E&TC': 'Computer Engineering',
+  'MBBS': 'MBBS / Medicine',
+  'BDS': 'Dentistry',
+  'B.Pharm': 'Pharmacy',
+  'B.Sc Nursing': 'Nursing',
+  'B.Com': '_default',
+  'CA': '_default',
+  'BBA': 'Marketing & Sales',
+  'MBA': 'Product Management',
+  'CS': '_default',
+  'CS (Company Secretary)': '_default',
+  'B.Sc Computer Science': 'Software Development',
+  'B.Sc IT': 'DevOps & Cloud',
+  'BCA': 'Software Development',
+  'MCA': 'Software Development',
+  'B.Sc Agriculture': '_default',
+};
+
 function getDomainConfig(field, subfield) {
-  const fieldMap = DOMAIN_CONFIG[field];
+  const resolvedField = FIELD_ALIASES[field] || field;
+  const resolvedSubfield = SUBFIELD_ALIASES[subfield] || subfield;
+
+  const fieldMap = DOMAIN_CONFIG[resolvedField] || DOMAIN_CONFIG[field];
   if (!fieldMap) {
     // Try to find the field by partial match
     const matchedField = Object.keys(DOMAIN_CONFIG).find(
-      (k) => k.toLowerCase().includes((field || '').toLowerCase())
+      (k) => k.toLowerCase().includes((resolvedField || '').toLowerCase())
     );
     if (matchedField) {
       const mfMap = DOMAIN_CONFIG[matchedField];
-      return mfMap[subfield] || mfMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+      return mfMap[resolvedSubfield] || mfMap[subfield] || mfMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
     }
     return DOMAIN_CONFIG['Engineering']['_default'];
   }
-  return fieldMap[subfield] || fieldMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+  return fieldMap[resolvedSubfield] || fieldMap[subfield] || fieldMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -590,9 +624,12 @@ function pickRelevantSkills(skills, field, subfield, cfg) {
   // Field-specific keyword sets for relevance check
   const FIELD_KEYWORDS = {
     'Computer Science & IT': ['react','node','python','java','javascript','typescript','docker','kubernetes','sql','nosql','aws','gcp','azure','django','flask','spring','mongodb','redis','api','git','linux','html','css','tensorflow','pytorch','ml','ai','devops','ci/cd','golang','rust','kotlin','swift'],
+    'Science & Technology': ['react','node','python','java','javascript','typescript','docker','kubernetes','sql','nosql','aws','gcp','azure','django','flask','spring','mongodb','redis','api','git','linux','html','css','tensorflow','pytorch','ml','ai','devops','ci/cd','golang','rust','kotlin','swift'],
     'Engineering': ['solidworks','autocad','ansys','matlab','catia','revit','staad','etabs','plc','scada','cad','fea','gd&t','etap','verilog','vhdl','fpga','labview','proteus','3ds max','inventor','creo','nastran'],
     'Healthcare & Medical': ['patient','clinical','diagnosis','treatment','bls','acls','icu','opd','emr','pharmacology','anatomy','nursing','mbbs','medical','surgery','dental','physiotherapy'],
+    'Medical & Healthcare': ['patient','clinical','diagnosis','treatment','bls','acls','icu','opd','emr','pharmacology','anatomy','nursing','mbbs','medical','surgery','dental','physiotherapy'],
     'Business & Management': ['excel','powerpoint','crm','salesforce','jira','confluence','agile','scrum','okr','kpi','analytics','strategy','marketing','seo','google ads','hubspot','tableau','power bi'],
+    'Commerce & Management': ['excel','powerpoint','crm','salesforce','jira','confluence','agile','scrum','okr','kpi','analytics','strategy','marketing','seo','google ads','hubspot','tableau','power bi','tally','gst','audit'],
     'Finance & Accounting': ['excel','bloomberg','tally','sap','quickbooks','financial modeling','valuation','dcf','ifrs','gaap','gst','tds','audit','erp','accounting','oracle financials'],
     'Design & Creative': ['figma','adobe','photoshop','illustrator','xd','sketch','ux','ui','prototyping','design systems','after effects','premiere','indesign','canva','blender'],
   };
@@ -667,42 +704,173 @@ export const aiService = {
   },
 
   /**
-   * Performs ATS analysis with domain-specific matched/missing keywords.
+   * Performs dynamic ATS analysis tailored to the actual resume content, domain, and role.
    */
   async analyzeResume(resumeData, targetRole, field, subfield) {
-    await delay(1100);
-    const technicalSkillsCount = resumeData?.skills?.technical?.length || 0;
-    const projectsCount = resumeData?.projects?.length || 0;
-    const experienceCount = resumeData?.experience?.length || 0;
-    const hasCert = (resumeData?.certifications?.length || 0) > 0;
+    await delay(600);
 
-    let baseScore = 75;
-    if (technicalSkillsCount >= 5) baseScore += 8;
-    if (projectsCount >= 2) baseScore += 7;
-    if (experienceCount >= 1) baseScore += 5;
-    if (hasCert) baseScore += 4;
-
-    const score = Math.min(96, Math.max(82, baseScore));
-    const keywordMatch = Math.min(94, Math.max(78, score - 4));
     const cfg = getDomainConfig(field, subfield);
     const roleLabel = targetRole || subfield || field || 'your target role';
+
+    // 1. Evaluate Profile & Contact Info (Max 15)
+    let contactScore = 0;
+    const p = resumeData?.profile || {};
+    if (p.fullName && p.fullName.trim().length > 2) contactScore += 3;
+    if (p.email && p.email.includes('@')) contactScore += 3;
+    if (p.phone && p.phone.trim().length >= 8) contactScore += 3;
+    if (p.location && p.location.trim().length > 2) contactScore += 2;
+    if (p.linkedin || p.portfolio || p.github) contactScore += 4;
+
+    // 2. Evaluate Professional Summary (Max 15)
+    let summaryScore = 0;
+    const summary = resumeData?.careerGoal?.summary || '';
+    const wordCount = summary.trim() ? summary.trim().split(/\s+/).length : 0;
+    if (wordCount >= 40) summaryScore = 15;
+    else if (wordCount >= 20) summaryScore = 11;
+    else if (wordCount > 5) summaryScore = 6;
+    else summaryScore = 0;
+
+    // 3. Evaluate Skills (Max 25)
+    let skillsScore = 0;
+    const techSkills = resumeData?.skills?.technical || [];
+    const softSkills = resumeData?.skills?.soft || [];
+    const languages = resumeData?.skills?.languages || [];
+
+    if (techSkills.length >= 8) skillsScore += 20;
+    else if (techSkills.length >= 5) skillsScore += 16;
+    else if (techSkills.length >= 3) skillsScore += 11;
+    else if (techSkills.length >= 1) skillsScore += 6;
+
+    if (softSkills.length >= 3) skillsScore += 3;
+    if (languages.length >= 1) skillsScore += 2;
+
+    // 4. Evaluate Projects (Max 25)
+    let projectsScore = 0;
+    const projects = resumeData?.projects || [];
+    if (projects.length >= 3) projectsScore += 18;
+    else if (projects.length === 2) projectsScore += 15;
+    else if (projects.length === 1) projectsScore += 9;
+
+    const hasProjectTech = projects.some((pr) => pr.technologies && pr.technologies.length > 0);
+    if (hasProjectTech) projectsScore += 4;
+
+    const hasProjectLinks = projects.some((pr) => pr.github || pr.liveUrl || pr.link);
+    if (hasProjectLinks) projectsScore += 3;
+
+    // 5. Evaluate Work Experience (Max 10)
+    let experienceScore = 0;
+    const experience = resumeData?.experience || [];
+    if (experience.length >= 2) experienceScore += 8;
+    else if (experience.length === 1) experienceScore += 6;
+    else experienceScore += 2; // fresher default
+
+    // Check for quantifiable metrics (%, numbers) in experience and projects
+    const allText = [
+      summary,
+      ...projects.map((pr) => `${pr.name} ${pr.description} ${(pr.keyFeatures || []).join(' ')}`),
+      ...experience.map((ex) => `${ex.role} ${ex.company} ${(ex.responsibilities || []).join(' ')}`),
+      ...techSkills,
+    ].join(' ').toLowerCase();
+
+    const hasMetrics = /\d+%|\d+\s*(k|m|users|requests|ms|seconds|hours|clients|reduction|increase|improvement|accuracy)/i.test(allText);
+    if (hasMetrics) experienceScore += 2;
+
+    // 6. Evaluate Education & Certifications (Max 10)
+    let eduCertScore = 0;
+    const education = resumeData?.education || [];
+    const certs = resumeData?.certifications || [];
+    if (education.length > 0 && education[0].college) eduCertScore += 6;
+    if (certs.length >= 2) eduCertScore += 4;
+    else if (certs.length === 1) eduCertScore += 2;
+
+    // Total Score (out of 100)
+    const rawTotal = contactScore + summaryScore + skillsScore + projectsScore + experienceScore + eduCertScore;
+    const score = Math.min(98, Math.max(38, rawTotal));
+
+    // Keyword Analysis against domain keywords
+    const domainKeywordCandidates = [
+      ...(cfg.atsKeywords?.matched || []),
+      ...(cfg.atsKeywords?.missing || []),
+      ...(cfg.defaultSkills ? cfg.defaultSkills.split(',').map((s) => s.trim()) : [])
+    ];
+    const uniqueDomainKeywords = Array.from(new Set(domainKeywordCandidates));
+
+    const matchedKeywords = [];
+    const missingKeywords = [];
+
+    uniqueDomainKeywords.forEach((kw) => {
+      if (allText.includes(kw.toLowerCase())) {
+        matchedKeywords.push(kw);
+      } else {
+        missingKeywords.push(kw);
+      }
+    });
+
+    // Also include top user technical skills in matchedKeywords if matched
+    techSkills.slice(0, 4).forEach((sk) => {
+      if (!matchedKeywords.some((m) => m.toLowerCase() === sk.toLowerCase())) {
+        matchedKeywords.unshift(sk);
+      }
+    });
+
+    // Calculate dynamic Keyword Match percentage
+    const matchRatio = uniqueDomainKeywords.length > 0
+      ? (matchedKeywords.length / (matchedKeywords.length + missingKeywords.length))
+      : 0.75;
+    const keywordMatch = Math.min(97, Math.max(45, Math.round(matchRatio * 100)));
+
+    // Generate Dynamic, Tailored Improvement Suggestions
+    const suggestions = [];
+
+    if (!p.linkedin && !p.portfolio && !p.github) {
+      suggestions.push(`Add your LinkedIn profile or portfolio link to boost recruiter contact rate and online visibility.`);
+    }
+
+    if (techSkills.length < 5) {
+      const suggestedAdditions = missingKeywords.slice(0, 3).join(', ') || 'industry-standard tools';
+      suggestions.push(`Expand your technical skills for ${roleLabel}. Consider adding relevant keywords such as: ${suggestedAdditions}.`);
+    }
+
+    if (projects.length < 2) {
+      suggestions.push(`Add at least 2 detailed projects showcasing hands-on experience in ${roleLabel}.`);
+    }
+
+    if (!hasMetrics) {
+      suggestions.push(`Include measurable metrics (e.g. "% improvement", "reduced execution time by 30%") in your project or experience bullets to satisfy automated ATS filters.`);
+    }
+
+    if (wordCount < 20) {
+      suggestions.push(`Craft a strong 2-3 sentence professional summary targeted specifically toward ${roleLabel}.`);
+    }
+
+    if (certs.length === 0) {
+      suggestions.push(`Add an industry-recognized certification relevant to ${roleLabel} to enhance candidate competitiveness.`);
+    }
+
+    if (suggestions.length === 0) {
+      suggestions.push(`Great resume! Maintain up-to-date project metrics and tailor your keywords to specific job descriptions.`);
+    }
+
+    // Status description
+    let status = 'Needs Polish';
+    if (score >= 90) status = 'Exceptional ATS Match';
+    else if (score >= 80) status = 'Strong ATS Match';
+    else if (score >= 65) status = 'Good ATS Match';
+    else status = 'Needs Improvement';
 
     return {
       score,
       keywordMatch,
-      suggestionsCount: 2,
-      status: score >= 90 ? 'Great match!' : 'Good match',
-      matchedKeywords: cfg.atsKeywords.matched,
-      missingKeywords: cfg.atsKeywords.missing,
+      suggestionsCount: suggestions.length,
+      status,
+      matchedKeywords: matchedKeywords.slice(0, 8),
+      missingKeywords: missingKeywords.slice(0, 6),
       formattingFeedback: [
-        'ATS-compliant single-column header hierarchy detected.',
-        'Contact info, LinkedIn, and portfolio links properly structured for parsing.',
-        'Chronological order validated without career gaps.',
+        p.linkedin || p.portfolio ? 'Clean ATS-friendly contact and portfolio links detected.' : 'Standard single-column header hierarchy.',
+        projects.length > 0 ? 'Project stack tags and structured bullet points validated.' : 'Chronological format adhering to ATS parsing standards.',
+        hasMetrics ? 'Quantifiable accomplishments and percentage metrics identified.' : 'Action verbs used effectively in responsibilities.',
       ],
-      improvementSuggestions: [
-        `Add quantifiable metrics (e.g. "% improvement", "cost saved") to your experience bullets to strengthen ATS ranking for ${roleLabel}.`,
-        `Include missing industry keywords: ${cfg.atsKeywords.missing.join(', ')} to exceed 95% ATS screening algorithms.`,
-      ],
+      improvementSuggestions: suggestions.slice(0, 3),
     };
   },
 

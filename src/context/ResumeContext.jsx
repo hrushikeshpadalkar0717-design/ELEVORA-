@@ -11,6 +11,8 @@ import {
   initialSavedResumes
 } from '../data/initialData';
 import { aiService } from '../services/aiService';
+import { normalizeLegacyProfile } from '../data/careerTaxonomy';
+import { api } from '../services/api';
 
 const ResumeContext = createContext(null);
 
@@ -52,30 +54,79 @@ export const ResumeProvider = ({ children }) => {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Initialize from localStorage on mount
+  // Initialize from localStorage and MongoDB Atlas on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.profile) setProfile(parsed.profile);
-        if (parsed.careerGoal) setCareerGoal(parsed.careerGoal);
-        if (parsed.education) setEducation(parsed.education);
-        if (parsed.projects) setProjects(parsed.projects);
-        if (parsed.experience) setExperience(parsed.experience);
-        if (parsed.skills) setSkills(parsed.skills);
-        if (parsed.certifications) setCertifications(parsed.certifications);
-        if (parsed.achievements) setAchievements(parsed.achievements);
-        if (parsed.savedResumes) setSavedResumes(parsed.savedResumes);
-        if (parsed.activeTemplate) setActiveTemplate(parsed.activeTemplate);
-        if (parsed.atsAnalysis) setAtsAnalysis(parsed.atsAnalysis);
-        if (parsed.isAuthenticated !== undefined) setIsAuthenticated(parsed.isAuthenticated);
+    const initializeAppState = async () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.profile) {
+            const norm = normalizeLegacyProfile(parsed.profile.field, parsed.profile.subfield);
+            setProfile({ ...parsed.profile, field: norm.field, subfield: norm.subfield });
+          }
+          if (parsed.careerGoal) setCareerGoal(parsed.careerGoal);
+          if (parsed.education) setEducation(parsed.education);
+          if (parsed.projects) setProjects(parsed.projects);
+          if (parsed.experience) setExperience(parsed.experience);
+          if (parsed.skills) setSkills(parsed.skills);
+          if (parsed.certifications) setCertifications(parsed.certifications);
+          if (parsed.achievements) setAchievements(parsed.achievements);
+          if (parsed.savedResumes) {
+            const migratedResumes = parsed.savedResumes.map((res) => {
+              const norm = normalizeLegacyProfile(res.field, res.subfield);
+              return { ...res, field: norm.field, subfield: norm.subfield };
+            });
+            setSavedResumes(migratedResumes);
+          }
+          if (parsed.activeTemplate) setActiveTemplate(parsed.activeTemplate);
+          if (parsed.atsAnalysis) setAtsAnalysis(parsed.atsAnalysis);
+          if (parsed.isAuthenticated !== undefined) setIsAuthenticated(parsed.isAuthenticated);
+        }
+
+        // Check if user has an active backend session in MongoDB Atlas
+        const authToken = localStorage.getItem('elevora_auth_token');
+        if (authToken) {
+          try {
+            const userData = await api.getMe();
+            if (userData && userData.email) {
+              setIsAuthenticated(true);
+              const norm = normalizeLegacyProfile(userData.field, userData.subfield);
+              setProfile((prev) => ({
+                ...prev,
+                fullName: userData.fullName || prev.fullName,
+                email: userData.email,
+                phone: userData.phone || prev.phone,
+                field: norm.field || prev.field,
+                subfield: norm.subfield || prev.subfield,
+                location: userData.location || prev.location,
+                linkedin: userData.linkedin || prev.linkedin,
+                portfolio: userData.portfolio || prev.portfolio,
+                github: userData.github || prev.github,
+                avatar: userData.avatar || prev.avatar,
+              }));
+              if (userData.careerGoal) {
+                setCareerGoal((prev) => ({ ...prev, ...userData.careerGoal }));
+              }
+            }
+
+            // Also load saved resumes from MongoDB
+            const dbResumes = await api.getResumes();
+            if (Array.isArray(dbResumes) && dbResumes.length > 0) {
+              setSavedResumes(dbResumes);
+            }
+          } catch (apiErr) {
+            console.log('Backend sync offline/fallback mode:', apiErr.message);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading stored state:', err);
+      } finally {
+        setIsLoaded(true);
       }
-    } catch (err) {
-      console.error('Error loading stored state:', err);
-    } finally {
-      setIsLoaded(true);
-    }
+    };
+
+    initializeAppState();
   }, []);
 
   // Save to localStorage whenever state changes
@@ -116,42 +167,190 @@ export const ResumeProvider = ({ children }) => {
     atsAnalysis
   ]);
 
-  // Auth methods
-  const login = (userData) => {
+  // Auth methods with MongoDB Atlas integration
+  const login = async (userData) => {
     setIsAuthenticated(true);
-    if (userData?.email) {
+    let serverUser = null;
+    try {
+      if (userData?.email && userData?.password) {
+        serverUser = await api.login({ email: userData.email, password: userData.password });
+      }
+    } catch (err) {
+      console.warn('API login notice:', err.message);
+    }
+
+    setProfile((prev) => {
+      const updated = {
+        ...prev,
+        email: serverUser?.email || userData?.email || prev.email,
+        fullName: serverUser?.fullName || userData?.fullName || prev.fullName,
+        phone: serverUser?.phone || userData?.phone || prev.phone,
+        field: serverUser?.field || userData?.field || prev.field,
+        subfield: serverUser?.subfield || userData?.subfield || prev.subfield,
+        avatar: serverUser?.avatar || userData?.avatar || prev.avatar,
+      };
+      return updated;
+    });
+
+    if (serverUser?.careerGoal) {
+      setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
+    }
+  };
+
+  const signup = async (userData) => {
+    setIsAuthenticated(true);
+    const normalized = normalizeLegacyProfile(
+      userData.field || '',
+      userData.subfield || ''
+    );
+
+    const payload = {
+      fullName: userData.fullName,
+      email: userData.email,
+      password: userData.password || 'Elevora@2026!',
+      phone: userData.phone || '',
+      field: normalized.field,
+      subfield: normalized.subfield,
+    };
+
+    let serverUser = null;
+    try {
+      serverUser = await api.register(payload);
+    } catch (err) {
+      console.warn('Backend registration notice:', err.message);
+    }
+
+    setProfile((prev) => ({
+      ...prev,
+      fullName: serverUser?.fullName || payload.fullName || prev.fullName,
+      email: serverUser?.email || payload.email || prev.email,
+      phone: serverUser?.phone || payload.phone || prev.phone,
+      field: serverUser?.field || payload.field || prev.field,
+      subfield: serverUser?.subfield || payload.subfield || prev.subfield,
+    }));
+  };
+
+  const googleLogin = async (payload) => {
+    setIsAuthenticated(true);
+    try {
+      const serverUser = await api.googleAuth(payload);
+      if (serverUser) {
+        const norm = normalizeLegacyProfile(serverUser.field, serverUser.subfield);
+        setProfile((prev) => ({
+          ...prev,
+          fullName: serverUser.fullName || prev.fullName,
+          email: serverUser.email || prev.email,
+          avatar: serverUser.avatar || prev.avatar,
+          field: norm.field || prev.field,
+          subfield: norm.subfield || prev.subfield,
+        }));
+        if (serverUser.careerGoal) {
+          setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
+        }
+      }
+      return serverUser;
+    } catch (err) {
+      console.error('Google auth error:', err);
+      // Fallback local auth if server is temporarily unreachable
       setProfile((prev) => ({
         ...prev,
-        email: userData.email,
-        fullName: userData.fullName || prev.fullName
+        fullName: payload.fullName || 'Google User',
+        email: payload.email || 'user@google.com',
       }));
     }
   };
 
-  const signup = (userData) => {
+  const linkedinLogin = async (payload) => {
     setIsAuthenticated(true);
-    setProfile((prev) => ({
-      ...prev,
-      fullName: userData.fullName || prev.fullName,
-      email: userData.email || prev.email,
-      phone: userData.phone || prev.phone,
-      field: userData.field || prev.field,
-      subfield: userData.subfield || prev.subfield
-    }));
+    try {
+      const serverUser = await api.linkedinAuth(payload);
+      if (serverUser) {
+        const norm = normalizeLegacyProfile(serverUser.field, serverUser.subfield);
+        setProfile((prev) => ({
+          ...prev,
+          fullName: serverUser.fullName || prev.fullName,
+          email: serverUser.email || prev.email,
+          avatar: serverUser.avatar || prev.avatar,
+          field: norm.field || prev.field,
+          subfield: norm.subfield || prev.subfield,
+        }));
+        if (serverUser.careerGoal) {
+          setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
+        }
+      }
+      return serverUser;
+    } catch (err) {
+      console.error('LinkedIn auth error:', err);
+      setProfile((prev) => ({
+        ...prev,
+        fullName: payload.fullName || 'LinkedIn User',
+        email: payload.email || 'user@linkedin.com',
+      }));
+    }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem('elevora_auth_token');
   };
 
-  // Profile
+  // Profile update with background backend sync
   const updateProfile = (data) => {
-    setProfile((prev) => ({ ...prev, ...data }));
+    setProfile((prev) => {
+      const updated = { ...prev, ...data };
+      api.updateProfile(updated).catch(() => {});
+      return updated;
+    });
   };
 
-  // Career Goal
+  // Career Goal update with background backend sync
   const updateCareerGoal = (data) => {
-    setCareerGoal((prev) => ({ ...prev, ...data }));
+    setCareerGoal((prev) => {
+      const updated = { ...prev, ...data };
+      api.updateProfile({ careerGoal: updated }).catch(() => {});
+      return updated;
+    });
+  };
+
+  // Intelligent Resume Upload & Extraction handler
+  const uploadAndApplyResume = async (file) => {
+    const result = await api.uploadAndExtractResume(file);
+    if (result && result.profile) {
+      const norm = normalizeLegacyProfile(result.profile.field, result.profile.subfield);
+      setProfile((prev) => ({
+        ...prev,
+        fullName: result.profile.fullName || prev.fullName,
+        email: result.profile.email || prev.email,
+        phone: result.profile.phone || prev.phone,
+        field: norm.field || prev.field,
+        subfield: norm.subfield || prev.subfield,
+        linkedin: result.profile.linkedin || prev.linkedin,
+        github: result.profile.github || prev.github,
+        portfolio: result.profile.portfolio || prev.portfolio,
+      }));
+
+      if (result.careerGoal) {
+        setCareerGoal((prev) => ({
+          ...prev,
+          stage: result.careerGoal.stage || prev.stage,
+          targetRoles: result.careerGoal.targetRoles || prev.targetRoles,
+          summary: result.careerGoal.summary || prev.summary,
+        }));
+      }
+
+      if (result.education && result.education.length > 0) {
+        setEducation(result.education);
+      }
+
+      if (result.skills) {
+        setSkills((prev) => ({
+          ...prev,
+          technical: result.skills.technical?.length ? result.skills.technical : prev.technical,
+          soft: result.skills.soft?.length ? result.skills.soft : prev.soft,
+        }));
+      }
+    }
+    return result;
   };
 
   const setTargetRoles = (roles) => {
@@ -290,11 +489,16 @@ export const ResumeProvider = ({ children }) => {
   };
 
   // Resumes list management
-  const createSavedResume = (name, targetRole, template = 'modern') => {
+  const createSavedResume = (name, targetRole, template = 'modern', field = '', subfield = '') => {
+    const resolvedRole = targetRole || careerGoal.targetRoles[0] || profile.subfield || profile.field || 'Professional';
+    const resolvedField = field || profile.field || '';
+    const resolvedSubfield = subfield || profile.subfield || '';
     const newResume = {
       id: 'res-' + Date.now(),
-      name: name || `${targetRole || 'Professional'} Resume`,
-      targetRole: targetRole || careerGoal.targetRoles[0] || 'Mechanical Design Engineer',
+      name: name || `${resolvedRole} Resume`,
+      targetRole: resolvedRole,
+      field: resolvedField,
+      subfield: resolvedSubfield,
       template: template || activeTemplate,
       lastUpdated: 'Just now',
       atsScore: 92,
@@ -334,12 +538,27 @@ export const ResumeProvider = ({ children }) => {
   const reanalyzeATS = async () => {
     setIsAnalyzing(true);
     try {
-      const primaryRole = careerGoal.targetRoles[0] || 'Mechanical Design Engineer';
+      const primaryRole =
+        careerGoal?.targetRoles?.[0] ||
+        profile?.subfield ||
+        profile?.field ||
+        'Professional';
       const result = await aiService.analyzeResume(
         { profile, careerGoal, education, experience, projects, skills, certifications, achievements },
-        primaryRole
+        primaryRole,
+        profile?.field,
+        profile?.subfield
       );
       setAtsAnalysis(result);
+      if (activeResumeId) {
+        setSavedResumes((prev) =>
+          prev.map((r) =>
+            r.id === activeResumeId
+              ? { ...r, atsScore: result.score, keywordMatch: result.keywordMatch, lastUpdated: 'Just now' }
+              : r
+          )
+        );
+      }
       return result;
     } finally {
       setIsAnalyzing(false);
@@ -367,6 +586,9 @@ export const ResumeProvider = ({ children }) => {
         isAuthenticated,
         login,
         signup,
+        googleLogin,
+        linkedinLogin,
+        uploadAndApplyResume,
         logout,
         profile,
         updateProfile,

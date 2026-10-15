@@ -5,6 +5,11 @@ import { TemplateClassic } from './TemplateClassic';
 import { TemplateMinimal } from './TemplateMinimal';
 import { TemplateExecutive } from './TemplateExecutive';
 import { TemplateCreative } from './TemplateCreative';
+import { TemplateTechModern } from './TemplateTechModern';
+import { TemplateCorporateBlue } from './TemplateCorporateBlue';
+import { TemplateElegantSerif } from './TemplateElegantSerif';
+import { TemplateCompactAts } from './TemplateCompactAts';
+import { TemplateTwoColumn } from './TemplateTwoColumn';
 
 export const ResumePreview = ({ template: overrideTemplate, customData, id = 'resume-document-to-export' }) => {
   const resumeContext = useResume();
@@ -22,6 +27,16 @@ export const ResumePreview = ({ template: overrideTemplate, customData, id = 're
         return <TemplateExecutive data={data} />;
       case 'creative':
         return <TemplateCreative data={data} />;
+      case 'tech-modern':
+        return <TemplateTechModern data={data} />;
+      case 'corporate-blue':
+        return <TemplateCorporateBlue data={data} />;
+      case 'elegant-serif':
+        return <TemplateElegantSerif data={data} />;
+      case 'compact-ats':
+        return <TemplateCompactAts data={data} />;
+      case 'two-column':
+        return <TemplateTwoColumn data={data} />;
       case 'modern':
       default:
         return <TemplateModern data={data} />;

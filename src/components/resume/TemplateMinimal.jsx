@@ -1,4 +1,5 @@
 import React from 'react';
+import { ensureUrl, formatDisplayUrl } from '../../utils/linkUtils';
 
 export const TemplateMinimal = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
@@ -14,9 +15,35 @@ export const TemplateMinimal = ({ data }) => {
           </p>
         </div>
         <div className="text-right text-[11px] text-slate-500 space-y-0.5">
-          <div>{profile.email} • {profile.phone}</div>
-          <div>{profile.location}</div>
-          {profile.linkedin && <div>{profile.linkedin.replace(/^https?:\/\//, '')}</div>}
+          <div className="flex flex-wrap justify-end gap-x-2">
+            {profile.email && (
+              <a href={`mailto:${profile.email}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline">
+                {profile.email}
+              </a>
+            )}
+            {profile.email && profile.phone && <span>•</span>}
+            {profile.phone && <span>{profile.phone}</span>}
+          </div>
+          {profile.location && <div>{profile.location}</div>}
+          <div className="flex flex-wrap justify-end gap-x-2">
+            {profile.linkedin && (
+              <a href={ensureUrl(profile.linkedin)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                {formatDisplayUrl(profile.linkedin)}
+              </a>
+            )}
+            {profile.linkedin && profile.portfolio && <span>•</span>}
+            {profile.portfolio && (
+              <a href={ensureUrl(profile.portfolio)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                {formatDisplayUrl(profile.portfolio)}
+              </a>
+            )}
+            {profile.portfolio && profile.github && <span>•</span>}
+            {profile.github && (
+              <a href={ensureUrl(profile.github)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                {formatDisplayUrl(profile.github)}
+              </a>
+            )}
+          </div>
         </div>
       </header>
 
@@ -67,7 +94,21 @@ export const TemplateMinimal = ({ data }) => {
                 </div>
                 <p className="text-slate-600 mt-0.5">{proj.description}</p>
                 {proj.technologies && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">Stack: {proj.technologies.join(', ')}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Stack: {Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies}</p>
+                )}
+                {(proj.github || proj.liveUrl || proj.link) && (
+                  <div className="flex items-center gap-3 mt-1 text-[11px]">
+                    {(proj.github || (proj.link && proj.link.includes('github'))) && (
+                      <a href={ensureUrl(proj.github || proj.link)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                        GitHub
+                      </a>
+                    )}
+                    {(proj.liveUrl || (proj.link && !proj.link.includes('github'))) && (
+                      <a href={ensureUrl(proj.liveUrl || proj.link)} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">
+                        Live Demo
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -96,14 +137,38 @@ export const TemplateMinimal = ({ data }) => {
       )}
 
       {/* Skills */}
-      <section className="grid grid-cols-4 gap-4">
+      <section className="mb-6 grid grid-cols-4 gap-4">
         <div className="col-span-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Skills</div>
         <div className="col-span-3 text-slate-700 space-y-1">
           <div><span className="font-medium text-slate-900">Tech:</span> {skills?.technical?.join(' • ')}</div>
           <div><span className="font-medium text-slate-900">Soft:</span> {skills?.soft?.join(' • ')}</div>
-          <div><span className="font-medium text-slate-900">Languages:</span> {skills?.languages?.map(l => `${l.name} (${l.proficiency})`).join(' • ')}</div>
+          {skills?.languages && <div><span className="font-medium text-slate-900">Languages:</span> {skills.languages.map(l => `${l.name} (${l.proficiency})`).join(' • ')}</div>}
         </div>
       </section>
+
+      {/* Certifications */}
+      {((certifications && certifications.length > 0) || (achievements && achievements.length > 0)) && (
+        <section className="grid grid-cols-4 gap-4">
+          <div className="col-span-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Credentials</div>
+          <div className="col-span-3 text-slate-700 space-y-1.5">
+            {certifications?.map((c) => (
+              <div key={c.id}>
+                <span className="font-medium text-slate-900">{c.name}</span> — {c.issuer} ({c.date})
+                {(c.link || c.url) && (
+                  <a href={ensureUrl(c.link || c.url)} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:underline font-medium text-[11px]">
+                    [View Certificate]
+                  </a>
+                )}
+              </div>
+            ))}
+            {achievements?.map((a) => (
+              <div key={a.id} className="text-slate-500">
+                <span className="font-medium text-slate-800">{a.title}</span> ({a.year})
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

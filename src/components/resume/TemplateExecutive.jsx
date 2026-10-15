@@ -1,4 +1,6 @@
-import { Mail, Phone, MapPin, Award, Briefcase, GraduationCap } from 'lucide-react';
+import { Mail, Phone, MapPin, Award, Briefcase, GraduationCap, Globe, ExternalLink } from 'lucide-react';
+import { LinkedinIcon, GithubIcon } from '../common/BrandIcons';
+import { ensureUrl, formatDisplayUrl } from '../../utils/linkUtils';
 
 export const TemplateExecutive = ({ data }) => {
   const { profile, careerGoal, education, experience, projects, skills, certifications, achievements } = data;
@@ -15,17 +17,52 @@ export const TemplateExecutive = ({ data }) => {
             </p>
           </div>
           <div className="text-[11px] text-slate-300 space-y-1 sm:text-right border-t sm:border-t-0 border-slate-700 pt-2 sm:pt-0">
-            <div className="flex items-center sm:justify-end gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-blue-400" />
-              <span>{profile.email}</span>
-            </div>
-            <div className="flex items-center sm:justify-end gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-blue-400" />
-              <span>{profile.phone}</span>
-            </div>
-            <div className="flex items-center sm:justify-end gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-blue-400" />
-              <span>{profile.location}</span>
+            {profile.email && (
+              <a
+                href={`mailto:${profile.email}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center sm:justify-end gap-1.5 hover:text-white transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5 text-blue-400" />
+                <span>{profile.email}</span>
+              </a>
+            )}
+            {profile.phone && (
+              <div className="flex items-center sm:justify-end gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-blue-400" />
+                <span>{profile.phone}</span>
+              </div>
+            )}
+            {profile.location && (
+              <div className="flex items-center sm:justify-end gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                <span>{profile.location}</span>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center sm:justify-end gap-2 pt-1 text-[10px]">
+              {profile.linkedin && (
+                <a
+                  href={ensureUrl(profile.linkedin)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-blue-300 hover:text-white hover:underline"
+                >
+                  <LinkedinIcon className="w-3 h-3 text-blue-400" />
+                  <span>{formatDisplayUrl(profile.linkedin)}</span>
+                </a>
+              )}
+              {profile.portfolio && (
+                <a
+                  href={ensureUrl(profile.portfolio)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-blue-300 hover:text-white hover:underline"
+                >
+                  <Globe className="w-3 h-3 text-blue-400" />
+                  <span>{formatDisplayUrl(profile.portfolio)}</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -93,6 +130,34 @@ export const TemplateExecutive = ({ data }) => {
                       ))}
                     </ul>
                   )}
+                  {(proj.github || proj.liveUrl || proj.link) && (
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px]">
+                      {(proj.github || (proj.link && proj.link.includes('github'))) && (
+                        <a
+                          href={ensureUrl(proj.github || proj.link)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-700 hover:underline font-semibold"
+                        >
+                          <GithubIcon className="w-3 h-3" />
+                          <span>GitHub</span>
+                          <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+                        </a>
+                      )}
+                      {(proj.liveUrl || (proj.link && !proj.link.includes('github'))) && (
+                        <a
+                          href={ensureUrl(proj.liveUrl || proj.link)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-indigo-700 hover:underline font-semibold"
+                        >
+                          <Globe className="w-3 h-3" />
+                          <span>Live Demo</span>
+                          <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -123,9 +188,27 @@ export const TemplateExecutive = ({ data }) => {
             <p className="text-slate-700 mb-1"><strong>Core Skills:</strong> {skills?.technical?.join(', ')}</p>
             <p className="text-slate-700 mb-1"><strong>Leadership:</strong> {skills?.soft?.join(', ')}</p>
             {certifications?.length > 0 && (
-              <p className="text-slate-700 mt-2">
-                <strong>Certified:</strong> {certifications.map(c => c.name).join(', ')}
-              </p>
+              <div className="mt-2 text-slate-700">
+                <strong>Certified:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                  {certifications.map(c => (
+                    <li key={c.id}>
+                      <span>{c.name}</span>
+                      {(c.link || c.url) && (
+                        <a
+                          href={ensureUrl(c.link || c.url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1.5 text-blue-700 hover:underline font-semibold inline-flex items-center gap-0.5"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>View Certificate</span>
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </section>

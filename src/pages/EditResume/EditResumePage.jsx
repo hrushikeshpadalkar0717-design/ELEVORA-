@@ -41,6 +41,7 @@ export const EditResumePage = () => {
     achievements,
     activeTemplate,
     setActiveTemplate,
+    setActiveResumeId,
     savedResumes,
     reanalyzeATS,
     isAnalyzing
@@ -58,6 +59,17 @@ export const EditResumePage = () => {
     name: 'Mechanical Design Engineer Resume',
     targetRole: 'Mechanical Design Engineer'
   };
+
+  // Synchronize active resume ID with context
+  React.useEffect(() => {
+    if (id) {
+      if (setActiveResumeId) setActiveResumeId(id);
+      const res = savedResumes.find((r) => r.id === id);
+      if (res?.template) {
+        setActiveTemplate(res.template);
+      }
+    }
+  }, [id, savedResumes, setActiveResumeId, setActiveTemplate]);
 
   const sectionsList = [
     { id: 'personal', name: 'Personal Information', completed: true },
@@ -152,9 +164,9 @@ export const EditResumePage = () => {
       </div>
 
       {/* 3-Column Split Layout matching Panel 6 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0 items-start">
         {/* Left Column: Sections Navigator (3 cols) */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-3 min-w-0 space-y-4">
           <Card className="p-4 space-y-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
               Resume Sections
@@ -205,18 +217,20 @@ export const EditResumePage = () => {
         </div>
 
         {/* Center Column: Live Resume Preview (6 cols) */}
-        <div className="lg:col-span-6 flex justify-center">
-          <div className="w-full bg-white rounded-2xl border border-slate-200 p-4 shadow-card">
+        <div className="lg:col-span-6 min-w-0 flex flex-col justify-start">
+          <div className="w-full bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-card overflow-hidden">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 text-xs">
               <span className="font-bold text-slate-700">Live Preview</span>
               <span className="text-slate-400">A4 • {activeTemplate}</span>
             </div>
-            <ResumePreview template={activeTemplate} id="resume-document-to-export" />
+            <div className="w-full overflow-x-auto">
+              <ResumePreview template={activeTemplate} id="resume-document-to-export" />
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Template Selection (3 cols) */}
-        <div className="lg:col-span-3 space-y-4">
+        {/* Right Column: Template Selection and ATS (3 cols) */}
+        <div className="lg:col-span-3 min-w-0 space-y-4">
           <Card className="p-4 space-y-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
               Choose Template
@@ -331,8 +345,21 @@ export const EditResumePage = () => {
               />
               <Input
                 label="Location"
-                value={profile.location}
+                value={profile.location || ''}
+                placeholder="e.g. Pune, Maharashtra"
                 onChange={(e) => updateProfile({ location: e.target.value })}
+              />
+              <Input
+                label="LinkedIn Profile"
+                value={profile.linkedin || ''}
+                placeholder="https://linkedin.com/in/username"
+                onChange={(e) => updateProfile({ linkedin: e.target.value })}
+              />
+              <Input
+                label="Portfolio / Website"
+                value={profile.portfolio || ''}
+                placeholder="https://yourportfolio.com"
+                onChange={(e) => updateProfile({ portfolio: e.target.value })}
               />
             </div>
           )}
@@ -405,6 +432,20 @@ export const EditResumePage = () => {
                 value={projects[0]?.description || ''}
                 onChange={(e) => resumeContext.updateProject(projects[0]?.id, { description: e.target.value })}
               />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="GitHub Link"
+                  value={projects[0]?.github || projects[0]?.link || ''}
+                  placeholder="https://github.com/..."
+                  onChange={(e) => resumeContext.updateProject(projects[0]?.id, { github: e.target.value })}
+                />
+                <Input
+                  label="Live Demo Link"
+                  value={projects[0]?.liveUrl || ''}
+                  placeholder="https://..."
+                  onChange={(e) => resumeContext.updateProject(projects[0]?.id, { liveUrl: e.target.value })}
+                />
+              </div>
             </div>
           )}
 

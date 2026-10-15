@@ -4,9 +4,10 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
-import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, Award, Trophy, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, Award, Trophy, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
+import { ensureUrl } from '../../utils/linkUtils';
 
 export const StepCertifications = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const StepCertifications = () => {
   // Cert Modal State
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [editingCert, setEditingCert] = useState(null);
-  const [certForm, setCertForm] = useState({ name: '', issuer: '', date: '', credentialId: '' });
+  const [certForm, setCertForm] = useState({ name: '', issuer: '', date: '', credentialId: '', link: '' });
 
   // Achievement Modal State
   const [achModalOpen, setAchModalOpen] = useState(false);
@@ -35,13 +36,19 @@ export const StepCertifications = () => {
   // Open Cert Modal
   const handleOpenAddCert = () => {
     setEditingCert(null);
-    setCertForm({ name: '', issuer: '', date: '', credentialId: '' });
+    setCertForm({ name: '', issuer: '', date: '', credentialId: '', link: '' });
     setCertModalOpen(true);
   };
 
   const handleOpenEditCert = (item) => {
     setEditingCert(item);
-    setCertForm({ ...item });
+    setCertForm({
+      name: item.name || '',
+      issuer: item.issuer || '',
+      date: item.date || '',
+      credentialId: item.credentialId || '',
+      link: item.link || item.url || ''
+    });
     setCertModalOpen(true);
   };
 
@@ -61,7 +68,7 @@ export const StepCertifications = () => {
   // Open Achievement Modal
   const handleOpenAddAch = () => {
     setEditingAch(null);
-    setAchForm({ title: '', description: '', year: new Date().getFullYear().toString() });
+    setAchForm({ title: '', description: '', year: '' });
     setAchModalOpen(true);
   };
 
@@ -121,6 +128,17 @@ export const StepCertifications = () => {
                         <h4 className="text-xs font-bold text-slate-800">{cert.name}</h4>
                         <p className="text-xs text-slate-500 mt-0.5">{cert.issuer}</p>
                         <p className="text-[11px] text-slate-400 mt-1">{cert.date}</p>
+                        {(cert.link || cert.url) && (
+                          <a
+                            href={ensureUrl(cert.link || cert.url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline mt-1.5"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>View Certificate</span>
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -259,6 +277,13 @@ export const StepCertifications = () => {
               placeholder="e.g. CSWP-1289"
             />
           </div>
+
+          <Input
+            label="Certificate URL / Verification Link (Optional)"
+            value={certForm.link}
+            onChange={(e) => setCertForm({ ...certForm, link: e.target.value })}
+            placeholder="https://coursera.org/verify/... or certificate link"
+          />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" size="sm" type="button" onClick={() => setCertModalOpen(false)}>

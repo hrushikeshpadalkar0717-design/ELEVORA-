@@ -5,9 +5,11 @@ import { Button } from '../../components/common/Button';
 import { Input, TextArea, Select } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import { EmptyState } from '../../components/common/EmptyState';
-import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, FolderKanban, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, FolderKanban, Sparkles, ExternalLink, Globe } from 'lucide-react';
+import { GithubIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
+import { ensureUrl } from '../../utils/linkUtils';
 
 export const StepProjects = () => {
   const navigate = useNavigate();
@@ -25,6 +27,8 @@ export const StepProjects = () => {
     role: '',
     duration: '',
     keyFeatures: '',
+    github: '',
+    liveUrl: '',
     link: ''
   });
 
@@ -35,9 +39,11 @@ export const StepProjects = () => {
       type: 'Academic',
       description: '',
       technologies: '',
-      role: 'Developer / Designer',
-      duration: '3 months',
+      role: '',
+      duration: '',
       keyFeatures: '',
+      github: '',
+      liveUrl: '',
       link: ''
     });
     setIsModalOpen(true);
@@ -53,6 +59,8 @@ export const StepProjects = () => {
       role: proj.role || '',
       duration: proj.duration || '',
       keyFeatures: Array.isArray(proj.keyFeatures) ? proj.keyFeatures.join('\n') : '',
+      github: proj.github || (proj.link && proj.link.includes('github') ? proj.link : ''),
+      liveUrl: proj.liveUrl || (proj.link && !proj.link.includes('github') ? proj.link : ''),
       link: proj.link || ''
     });
     setIsModalOpen(true);
@@ -71,7 +79,9 @@ export const StepProjects = () => {
       description: projectForm.description,
       role: projectForm.role,
       duration: projectForm.duration,
-      link: projectForm.link,
+      github: projectForm.github,
+      liveUrl: projectForm.liveUrl,
+      link: projectForm.github || projectForm.liveUrl || projectForm.link || '',
       technologies: projectForm.technologies
         ? projectForm.technologies.split(',').map((t) => t.trim()).filter(Boolean)
         : [],
@@ -195,6 +205,36 @@ export const StepProjects = () => {
                     </ul>
                   </div>
                 )}
+
+                {/* Project Links Preview */}
+                {(proj.github || proj.liveUrl || proj.link) && (
+                  <div className="flex flex-wrap items-center gap-3 pt-2 text-xs border-t border-slate-100">
+                    {(proj.github || (proj.link && proj.link.includes('github'))) && (
+                      <a
+                        href={ensureUrl(proj.github || proj.link)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:underline font-semibold"
+                      >
+                        <GithubIcon className="w-3.5 h-3.5" />
+                        <span>GitHub Repository</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {(proj.liveUrl || (proj.link && !proj.link.includes('github'))) && (
+                      <a
+                        href={ensureUrl(proj.liveUrl || proj.link)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 hover:underline font-semibold"
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>Live Demo</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             </Card>
           ))}
@@ -279,12 +319,20 @@ export const StepProjects = () => {
             rows={3}
           />
 
-          <Input
-            label="Project Link / GitHub (Optional)"
-            value={projectForm.link}
-            onChange={(e) => setProjectForm({ ...projectForm, link: e.target.value })}
-            placeholder="https://github.com/username/project"
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="GitHub Repository Link (Optional)"
+              value={projectForm.github}
+              onChange={(e) => setProjectForm({ ...projectForm, github: e.target.value })}
+              placeholder="https://github.com/username/project"
+            />
+            <Input
+              label="Live Demo Link (Optional)"
+              value={projectForm.liveUrl}
+              onChange={(e) => setProjectForm({ ...projectForm, liveUrl: e.target.value })}
+              placeholder="https://myproject-demo.com"
+            />
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" size="sm" type="button" onClick={() => setIsModalOpen(false)}>

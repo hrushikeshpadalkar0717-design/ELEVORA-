@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
+import { Input, Select } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import { ArrowRight, User, Mail, Phone, MapPin, Globe, Sparkles, Edit3 } from 'lucide-react';
 import { LinkedinIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
+import { MAIN_FIELDS, getSubfields, getFieldDisplayLabel, normalizeLegacyProfile } from '../../data/careerTaxonomy';
 
 export const StepBasics = () => {
   const navigate = useNavigate();
@@ -15,15 +16,19 @@ export const StepBasics = () => {
   const { showToast } = useToast();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: profile.fullName || '',
-    email: profile.email || '',
-    phone: profile.phone || '',
-    field: profile.field || 'Engineering',
-    subfield: profile.subfield || 'Mechanical Engineering',
-    location: profile.location || 'Pune, Maharashtra',
-    linkedin: profile.linkedin || 'https://linkedin.com/in/johndoe',
-    portfolio: profile.portfolio || 'https://johndoe.dev',
+  const [formData, setFormData] = useState(() => {
+    const normalized = normalizeLegacyProfile(profile.field || '', profile.subfield || '');
+    const isPlaceholderText = (val, pl) => !val || val === pl;
+    return {
+      fullName: profile.fullName || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      field: normalized.field,
+      subfield: normalized.subfield,
+      location: isPlaceholderText(profile.location, 'Enter Location') ? '' : profile.location,
+      linkedin: isPlaceholderText(profile.linkedin, 'Enter Linkedin Profile URL') ? '' : profile.linkedin,
+      portfolio: isPlaceholderText(profile.portfolio, 'Enter Portfolio URL') ? '' : profile.portfolio,
+    };
   });
 
   const handleChange = (e) => {
@@ -199,17 +204,27 @@ export const StepBasics = () => {
             icon={Phone}
           />
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Field"
+            <Select
+              label="Main Field"
               name="field"
-              value={formData.field}
-              onChange={handleChange}
+              value={getFieldDisplayLabel(formData.field)}
+              onChange={(e) => {
+                const rawField = MAIN_FIELDS.find((f) => getFieldDisplayLabel(f) === e.target.value) || e.target.value;
+                const firstSub = getSubfields(rawField)[0] || '';
+                setFormData((prev) => ({ ...prev, field: rawField, subfield: firstSub }));
+                updateProfile({ field: rawField, subfield: getSubfields(rawField)[0] || '' });
+              }}
+              options={MAIN_FIELDS.map((f) => getFieldDisplayLabel(f))}
             />
-            <Input
+            <Select
               label="Sub-field"
               name="subfield"
               value={formData.subfield}
-              onChange={handleChange}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, subfield: e.target.value }));
+                updateProfile({ subfield: e.target.value });
+              }}
+              options={getSubfields(formData.field)}
             />
           </div>
 

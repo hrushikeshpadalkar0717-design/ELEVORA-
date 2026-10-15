@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, GraduationCap, Award, Briefcase, Star, Sparkles 
 import { useResume } from '../../context/ResumeContext';
 import { aiService } from '../../services/aiService';
 import { useToast } from '../../context/ToastContext';
+import { getRoles } from '../../data/careerTaxonomy';
 
 export const StepCareerGoal = () => {
   const navigate = useNavigate();
@@ -17,6 +18,13 @@ export const StepCareerGoal = () => {
   const [roleType, setRoleType] = useState(careerGoal.roleType || 'Full-time');
   const [summary, setSummary] = useState(careerGoal.summary || '');
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
+  const availableRoles = getRoles(profile?.field, profile?.subfield);
+  const [selectedRoles, setSelectedRoles] = useState(() => {
+    const saved = careerGoal.targetRoles || [];
+    const matched = saved.filter((r) => availableRoles.includes(r));
+    return matched.length > 0 ? matched : availableRoles.slice(0, 2);
+  });
 
   const stages = [
     {
@@ -52,7 +60,7 @@ export const StepCareerGoal = () => {
     try {
       const userField = profile?.field || '';
       const userSubfield = profile?.subfield || '';
-      const userRole = careerGoal.targetRoles?.[0] || userSubfield || userField || 'Professional';
+      const userRole = selectedRoles?.[0] || careerGoal.targetRoles?.[0] || userSubfield || userField || 'Professional';
       const generated = await aiService.generateSummary({
         role: userRole,
         stage,
@@ -63,7 +71,7 @@ export const StepCareerGoal = () => {
         subfield: userSubfield,
       });
       setSummary(generated);
-      updateCareerGoal({ summary: generated, stage, roleType });
+      updateCareerGoal({ summary: generated, stage, roleType, targetRoles: selectedRoles });
       showToast('AI Summary generated successfully!', 'success');
     } catch {
       showToast('Error generating summary', 'error');
@@ -73,7 +81,7 @@ export const StepCareerGoal = () => {
   };
 
   const handleNext = () => {
-    updateCareerGoal({ stage, roleType, summary });
+    updateCareerGoal({ stage, roleType, summary, targetRoles: selectedRoles });
     navigate('/create-resume/education');
   };
 
@@ -151,6 +159,48 @@ export const StepCareerGoal = () => {
             })}
           </div>
         </div>
+
+        {/* Question 3: Specific Career Roles from Taxonomy */}
+        {availableRoles.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-sm font-bold text-slate-900">Target Career Roles</h2>
+              {(profile.subfield || profile.field) && (
+                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5">
+                  {profile.subfield || profile.field}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mb-3">
+              Select one or more roles tailored to your specialization to optimize your resume.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {availableRoles.map((role) => {
+                const isSelected = selectedRoles.includes(role);
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRoles((prev) =>
+                        prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+                      );
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {isSelected ? '✓ ' : '+ '}
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Career Objective / Professional Summary */}
         <div className="pt-4 border-t border-slate-100">

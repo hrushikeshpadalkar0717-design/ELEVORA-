@@ -38,6 +38,11 @@ export const ResumeGeneratedPage = () => {
     { id: 'minimal', name: 'Minimal', desc: 'Spacious grid layout with elegant simplicity' },
     { id: 'executive', name: 'Executive', desc: 'Commanding dark navy banner and structured credentials' },
     { id: 'creative', name: 'Creative', desc: 'Modern sidebar column with vibrant accent pills' },
+    { id: 'tech-modern', name: 'Tech Modern', desc: 'Polished teal header with skill badge grid — ideal for tech roles' },
+    { id: 'corporate-blue', name: 'Corporate Blue', desc: 'Conservative navy layout for corporate and enterprise roles' },
+    { id: 'elegant-serif', name: 'Elegant Serif', desc: 'Centered serif headings with restrained, refined typography' },
+    { id: 'compact-ats', name: 'Compact ATS', desc: 'Dense single-column layout optimized for ATS parsing' },
+    { id: 'two-column', name: 'Two-Column Professional', desc: 'Sidebar with skills & contact, main column for experience and projects' },
   ];
 
   const handleDownloadPdf = async () => {
@@ -73,6 +78,80 @@ export const ResumeGeneratedPage = () => {
     showToast('Re-synthesizing resume with AI optimizations...', 'info');
     await reanalyzeATS();
     showToast('Resume re-generated with refreshed keyword match!', 'success');
+  };
+
+  const handleDirectPrint = () => {
+    const resumeEl = document.getElementById('resume-document-to-export');
+    if (!resumeEl) {
+      showToast('Resume preview not found. Please wait for it to load.', 'error');
+      return;
+    }
+
+    // Collect all stylesheets from the current document
+    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map((link) => `<link rel="stylesheet" href="${link.href}" />`)
+      .join('\n');
+    const inlineStyles = Array.from(document.querySelectorAll('style'))
+      .map((s) => `<style>${s.innerHTML}</style>`)
+      .join('\n');
+
+    const resumeHtml = resumeEl.outerHTML;
+
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow) {
+      showToast('Pop-up blocked. Please allow pop-ups and try again.', 'error');
+      return;
+    }
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume — ${profile?.fullName || 'ELEVORA'}</title>
+  ${styleLinks}
+  ${inlineStyles}
+  <style>
+    @page { size: A4 portrait; margin: 12mm 15mm; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      display: flex;
+      justify-content: center;
+    }
+    #resume-document-to-export {
+      width: 210mm;
+      max-width: 210mm;
+      min-height: 297mm;
+      background: white;
+      box-shadow: none;
+      border-radius: 0;
+      overflow: visible;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    section { page-break-inside: avoid; break-inside: avoid; }
+    h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+  </style>
+</head>
+<body>
+  ${resumeHtml}
+</body>
+</html>`);
+
+    printWindow.document.close();
+
+    // Wait for resources to load, then print
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      // Close the window after printing (delay gives browser time to show dialog)
+      setTimeout(() => printWindow.close(), 500);
+    };
   };
 
   return (
@@ -161,7 +240,7 @@ export const ResumeGeneratedPage = () => {
               variant="ghost"
               size="sm"
               icon={Printer}
-              onClick={() => window.print()}
+              onClick={handleDirectPrint}
               className="w-full justify-start text-xs text-slate-500"
             >
               Direct Print
@@ -184,7 +263,7 @@ export const ResumeGeneratedPage = () => {
               onClick={() => setTemplateModalOpen(true)}
               className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 pt-1"
             >
-              <span>Explore 4 other templates</span>
+              <span>Explore 9 other templates</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </Card>

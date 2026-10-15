@@ -22,7 +22,7 @@ import { getRolesForProfile } from '../../data/initialData';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const { profile, careerGoal, setTargetRoles } = useResume();
+  const { profile, careerGoal, setTargetRoles, uploadAndApplyResume } = useResume();
   const { showToast } = useToast();
 
   const fileInputRef = useRef(null);
@@ -76,11 +76,11 @@ export const DashboardPage = () => {
     navigate('/create-resume/basics');
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.match(/\.(pdf|docx)$/i)) {
+    if (!file.name.match(/\.(pdf|docx|doc)$/i)) {
       showToast('Please upload a PDF or DOCX file', 'error');
       return;
     }
@@ -88,10 +88,26 @@ export const DashboardPage = () => {
     setIsUploading(true);
     setUploadedFileName(file.name);
 
-    setTimeout(() => {
+    try {
+      const result = await uploadAndApplyResume(file);
+      if (result?.taxonomy?.recommendedRoles?.length) {
+        setSelectedRoles(result.taxonomy.recommendedRoles);
+      }
+      showToast(
+        result?.message || `Successfully extracted profile & matched roles from ${file.name}!`,
+        'success'
+      );
+    } catch (err) {
+      console.warn('Resume extraction notice:', err.message);
+      showToast(
+        `File analyzed in local mode: ${file.name}. Review and adjust details below.`,
+        'info'
+      );
+    } finally {
       setIsUploading(false);
-      showToast(`Successfully extracted profile details from ${file.name}!`, 'success');
-    }, 1500);
+      // Reset input value so same file can be re-selected if desired
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (

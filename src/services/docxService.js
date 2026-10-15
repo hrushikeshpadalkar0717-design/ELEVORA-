@@ -190,8 +190,28 @@ export const generateDocxResume = async (resumeData) => {
                 color: '2563EB',
               }),
               new TextRun({
-                text: proj.technologies.join(', '),
+                text: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies,
                 size: 19,
+              }),
+            ],
+          })
+        );
+      }
+
+      if (proj.github || proj.liveUrl || proj.link) {
+        docChildren.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            children: [
+              new TextRun({
+                text: (proj.github || proj.link) ? `GitHub: ${proj.github || proj.link}  ` : '',
+                size: 18,
+                color: '2563EB',
+              }),
+              new TextRun({
+                text: proj.liveUrl ? `Live Demo: ${proj.liveUrl}` : '',
+                size: 18,
+                color: '2563EB',
               }),
             ],
           })
@@ -283,7 +303,7 @@ export const generateDocxResume = async (resumeData) => {
           spacing: { after: 40 },
           children: [
             new TextRun({
-              text: `${cert.name} — ${cert.issuer} (${cert.date})`,
+              text: `${cert.name} — ${cert.issuer} (${cert.date})${cert.link || cert.url ? ` | Link: ${cert.link || cert.url}` : ''}`,
               size: 20,
             }),
           ],

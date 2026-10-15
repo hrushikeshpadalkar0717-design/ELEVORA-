@@ -45,7 +45,13 @@ export const StepReview = () => {
     await new Promise((resolve) => setTimeout(resolve, 1400));
 
     // Create a new resume item in saved resumes list
-    createSavedResume(`${careerGoal.targetRoles?.[0] || 'Professional'} Resume`, careerGoal.targetRoles?.[0]);
+    createSavedResume(
+      `${careerGoal.targetRoles?.[0] || profile.subfield || profile.field || 'Professional'} Resume`,
+      careerGoal.targetRoles?.[0],
+      'modern',
+      profile.field,
+      profile.subfield
+    );
 
     // Celebratory confetti
     try {
