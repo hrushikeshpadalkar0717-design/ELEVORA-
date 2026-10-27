@@ -2,11 +2,12 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import crypto from 'crypto';
 import { User } from '../models/User.js';
+import { sendEmail } from '../utils/sendEmail.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const JWT_SECRET = process.env.JWT_SECRET || 'elevora_fallback_jwt_secret_key_2026';
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5174';
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 // In-memory OAuth state store (per-process; works for single server instance)
@@ -65,6 +66,7 @@ const safeUser = (user, token) => ({
   github: user.github || '',
   avatar: user.avatar || '',
   authProvider: user.authProvider,
+  hasCompletedOnboarding: Boolean(user.hasCompletedOnboarding && user.phone),
   careerGoal: user.careerGoal,
   activeTemplate: user.activeTemplate,
   token, // included for localStorage fallback compatibility
@@ -103,6 +105,7 @@ export const registerUser = async (req, res) => {
       field: field || 'Engineering',
       subfield: subfield || 'CSE',
       authProvider: 'local',
+      hasCompletedOnboarding: true,
     });
 
     const token = generateToken(user._id);
@@ -179,8 +182,7 @@ export const googleAuthRedirect = (req, res) => {
   const clientOrigin =
     req.query.client_url ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
-    process.env.CLIENT_URL ||
-    'http://localhost:5173';
+    CLIENT_URL;
 
   if (!clientId) {
     return res.redirect(`${clientOrigin}/login?error=google_not_configured`);
@@ -243,7 +245,7 @@ export const googleCallback = async (req, res) => {
 
     const idToken = tokenRes.data.id_token;
     if (!idToken) {
-      return res.redirect(`${CLIENT_URL}/login?error=google_no_id_token`);
+      return res.redirect(`${clientUrl}/login?error=google_no_id_token`);
     }
 
     // Verify ID token with Google's tokeninfo endpoint (server-side verification)
@@ -255,10 +257,10 @@ export const googleCallback = async (req, res) => {
     // Validate token claims
     if (googleData.aud !== clientId) {
       console.error('Google token audience mismatch');
-      return res.redirect(`${CLIENT_URL}/login?error=google_token_invalid`);
+      return res.redirect(`${clientUrl}/login?error=google_token_invalid`);
     }
     if (!googleData.email_verified || googleData.email_verified === 'false') {
-      return res.redirect(`${CLIENT_URL}/login?error=google_email_not_verified`);
+      return res.redirect(`${clientUrl}/login?error=google_email_not_verified`);
     }
 
     const googleId = googleData.sub;
@@ -268,6 +270,7 @@ export const googleCallback = async (req, res) => {
 
     // Find user by googleId first, then by verified email
     let user = await User.findOne({ googleId });
+    let isNewUser = false;
     if (!user) {
       // Check for an existing local account with the same email
       const emailUser = await User.findOne({ email });
@@ -287,15 +290,19 @@ export const googleCallback = async (req, res) => {
           googleId,
           field: 'Engineering',
           subfield: 'CSE',
+          phone: '',
+          hasCompletedOnboarding: false,
         });
+        isNewUser = true;
       }
     }
 
+    const needsOnboarding = isNewUser || !user.phone || !user.hasCompletedOnboarding;
     const elevoraToken = generateToken(user._id);
     setAuthCookie(res, elevoraToken);
 
     // Redirect to frontend with token in query param (one-time pickup by frontend)
-    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=google`);
+    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=google${needsOnboarding ? '&needsOnboarding=true' : ''}`);
   } catch (err) {
     console.error('Google callback error:', err.response?.data || err.message);
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -428,6 +435,8 @@ export const linkedinCallback = async (req, res) => {
           linkedinId,
           field: 'Engineering',
           subfield: 'CSE',
+          phone: '',
+          hasCompletedOnboarding: false,
         });
       }
     } else {
@@ -438,10 +447,11 @@ export const linkedinCallback = async (req, res) => {
       }
     }
 
+    const needsOnboarding = !user.phone || !user.hasCompletedOnboarding;
     const elevoraToken = generateToken(user._id);
     setAuthCookie(res, elevoraToken);
 
-    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=linkedin`);
+    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=linkedin${needsOnboarding ? '&needsOnboarding=true' : ''}`);
   } catch (err) {
     console.error('LinkedIn callback error:', err.response?.data || err.message);
     return res.redirect(`${clientUrl}/login?error=linkedin_auth_failed`);
@@ -476,6 +486,7 @@ export const updateUserProfile = async (req, res) => {
     const {
       fullName, phone, field, subfield, location,
       linkedin, portfolio, github, avatar, careerGoal, activeTemplate,
+      hasCompletedOnboarding,
     } = req.body;
 
     if (fullName !== undefined) user.fullName = fullName;
@@ -489,6 +500,7 @@ export const updateUserProfile = async (req, res) => {
     if (avatar !== undefined) user.avatar = avatar;
     if (careerGoal !== undefined) user.careerGoal = { ...user.careerGoal, ...careerGoal };
     if (activeTemplate !== undefined) user.activeTemplate = activeTemplate;
+    if (hasCompletedOnboarding !== undefined) user.hasCompletedOnboarding = hasCompletedOnboarding;
 
     const updatedUser = await user.save();
     return res.json(safeUser(updatedUser, null));
@@ -497,3 +509,134 @@ export const updateUserProfile = async (req, res) => {
     return res.status(500).json({ message: error.message || 'Error updating user profile' });
   }
 };
+
+// ─── TASK 6: Forgot & Reset Password ──────────────────────────────────────────
+
+// @route POST /api/auth/forgot-password
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Please provide an email address' });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const user = await User.findOne({ email: emailLower });
+
+    if (!user) {
+      // For security, avoid user enumeration, but return a friendly success confirmation
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, a password reset link has been dispatched.',
+      });
+    }
+
+    if (user.authProvider !== 'local' && !user.password) {
+      return res.status(400).json({
+        message: `This account signs in using ${user.authProvider}. Please use the social login button.`,
+      });
+    }
+
+    // Generate unhashed reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash token for database storage
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Set token & expiry (30 minutes)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
+    await user.save();
+
+    // Construct reset URL pointing to frontend
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+    const textMessage = `Hello ${user.fullName || 'User'},\n\nYou requested a password reset for your ELEVORA account.\n\nPlease click the link below or paste it into your browser to reset your password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n\nBest regards,\nThe ELEVORA Team`;
+
+    const htmlMessage = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+        <div style="margin-bottom: 24px; text-align: center;">
+          <div style="display: inline-block; width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #ffffff; font-weight: 800; font-size: 20px; line-height: 44px; text-align: center;">E</div>
+          <h2 style="color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Reset Your ELEVORA Password</h2>
+          <p style="color: #64748b; font-size: 13px; margin: 0;">Smart AI Resume & Career Builder</p>
+        </div>
+
+        <p style="color: #334155; font-size: 14px; line-height: 1.6;">Hello <strong>${user.fullName || 'there'}</strong>,</p>
+        <p style="color: #334155; font-size: 14px; line-height: 1.6;">We received a request to reset your password for your ELEVORA account. Click the button below to choose a new password:</p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">Reset Password</a>
+        </div>
+
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5;">This link will expire in <strong>30 minutes</strong>. If you did not make this request, you can safely ignore this email.</p>
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; word-break: break-all;">
+          If the button doesn't work, copy and paste this link: <br/>
+          <a href="${resetUrl}" style="color: #2563eb;">${resetUrl}</a>
+        </div>
+      </div>
+    `;
+
+    const mailResult = await sendEmail({
+      to: user.email,
+      subject: 'Password Reset Request — ELEVORA',
+      text: textMessage,
+      html: htmlMessage,
+    });
+
+    return res.json({
+      success: true,
+      message: mailResult?.isRealSmtp
+        ? 'Password reset link has been dispatched to your email address.'
+        : 'Password reset link generated! In local sandbox mode, a test inbox preview is provided.',
+      isRealSmtp: mailResult?.isRealSmtp || false,
+      previewUrl: mailResult?.previewUrl || null,
+      resetUrl,
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ message: error.message || 'Error processing password reset request' });
+  }
+};
+
+// @route PUT /api/auth/reset-password/:token
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Reset token is required' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    // Hash the token from the URL to compare with hashed token in DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired password reset token' });
+    }
+
+    // Set new password (pre-save hook will hash it with bcrypt)
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Password has been reset successfully! You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ message: error.message || 'Error resetting password' });
+  }
+};
+

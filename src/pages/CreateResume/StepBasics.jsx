@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, Select } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
-import { ArrowRight, User, Mail, Phone, MapPin, Globe, Sparkles, Edit3 } from 'lucide-react';
+import {
+  ArrowRight,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Sparkles,
+  Edit3,
+  UploadCloud,
+  Loader2,
+  CheckCircle2,
+} from 'lucide-react';
 import { LinkedinIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
@@ -12,24 +24,74 @@ import { MAIN_FIELDS, getSubfields, getFieldDisplayLabel, normalizeLegacyProfile
 
 export const StepBasics = () => {
   const navigate = useNavigate();
-  const { profile, updateProfile } = useResume();
+  const { profile, updateProfile, uploadAndApplyResume } = useResume();
   const { showToast } = useToast();
 
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [prevProfile, setPrevProfile] = useState(profile);
   const [formData, setFormData] = useState(() => {
-    const normalized = normalizeLegacyProfile(profile.field || '', profile.subfield || '');
+    const normalized = normalizeLegacyProfile(profile?.field || '', profile?.subfield || '');
     const isPlaceholderText = (val, pl) => !val || val === pl;
     return {
-      fullName: profile.fullName || '',
-      email: profile.email || '',
-      phone: profile.phone || '',
+      fullName: profile?.fullName || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
       field: normalized.field,
       subfield: normalized.subfield,
-      location: isPlaceholderText(profile.location, 'Enter Location') ? '' : profile.location,
-      linkedin: isPlaceholderText(profile.linkedin, 'Enter Linkedin Profile URL') ? '' : profile.linkedin,
-      portfolio: isPlaceholderText(profile.portfolio, 'Enter Portfolio URL') ? '' : profile.portfolio,
+      location: isPlaceholderText(profile?.location, 'Enter Location') ? '' : (profile?.location || ''),
+      linkedin: isPlaceholderText(profile?.linkedin, 'Enter Linkedin Profile URL') ? '' : (profile?.linkedin || ''),
+      portfolio: isPlaceholderText(profile?.portfolio, 'Enter Portfolio URL') ? '' : (profile?.portfolio || ''),
     };
   });
+
+  // Keep local form in sync when profile updates (e.g. via import or onboarding)
+  if (profile !== prevProfile) {
+    setPrevProfile(profile);
+    const normalized = normalizeLegacyProfile(profile?.field || '', profile?.subfield || '');
+    const isPlaceholderText = (val, pl) => !val || val === pl;
+    setFormData({
+      fullName: profile?.fullName || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
+      field: normalized.field,
+      subfield: normalized.subfield,
+      location: isPlaceholderText(profile?.location, 'Enter Location') ? '' : (profile?.location || ''),
+      linkedin: isPlaceholderText(profile?.linkedin, 'Enter Linkedin Profile URL') ? '' : (profile?.linkedin || ''),
+      portfolio: isPlaceholderText(profile?.portfolio, 'Enter Portfolio URL') ? '' : (profile?.portfolio || ''),
+    });
+  }
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(pdf|docx|doc)$/i)) {
+      showToast('Please upload a PDF or DOCX file', 'error');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadedFileName(file.name);
+    showToast(`Extracting information from ${file.name}...`, 'info');
+
+    try {
+      const result = await uploadAndApplyResume(file);
+      showToast(
+        result?.message || `Successfully auto-filled resume details from ${file.name}!`,
+        'success'
+      );
+    } catch (err) {
+      console.warn('Extraction notice:', err.message);
+      showToast(err.message || 'Could not parse resume file.', 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,10 +114,49 @@ export const StepBasics = () => {
   return (
     <div className="space-y-6 text-left">
       {/* Step Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">1. Basics Introduction</h1>
-        <p className="text-sm text-slate-500 mt-1">Let's start with some basic information about you.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">1. Basics Introduction</h1>
+          <p className="text-sm text-slate-500 mt-1">Let's start with some basic information about you.</p>
+        </div>
+
+        {/* Quick import action */}
+        <div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportFile}
+            accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            icon={isUploading ? Loader2 : UploadCloud}
+            isLoading={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs shadow-xs"
+          >
+            {isUploading ? 'Auto-Filling...' : '⚡ Import Resume to Auto-Fill'}
+          </Button>
+        </div>
       </div>
+
+      {uploadedFileName && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2 text-xs text-emerald-800">
+          <div className="flex items-center gap-2 truncate">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold">Auto-filled from {uploadedFileName}</span>
+            <span className="text-emerald-600 hidden sm:inline">— All sections (Basics, Education, Experience, Projects, Skills) have been populated. You can edit any field.</span>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs text-emerald-700 underline font-bold shrink-0 hover:text-emerald-900"
+          >
+            Upload Different File
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Basic Info Card (2 cols) */}
@@ -63,7 +164,7 @@ export const StepBasics = () => {
           <div>
             <h2 className="text-base font-bold text-slate-900">Basic Information</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              We already have your name, email, phone and field from your signup. Please confirm or update if needed.
+              Confirm or edit your personal contact details, domain, and professional links.
             </p>
           </div>
 

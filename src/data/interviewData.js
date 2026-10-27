@@ -370,7 +370,7 @@ export const defaultInterviewQuestions = {
     {
       id: 'gen-2', category: 'HR', difficulty: 'Easy', roleSpecific: false,
       question: 'What are your greatest strengths and one area you are actively improving?',
-      keyPoints: ['Strengths tied to role requirements with a specific example','Weakness framed as active improvement with measurable progress','Avoid cliches (\"I work too hard\")'],
+      keyPoints: ['Strengths tied to role requirements with a specific example','Weakness framed as active improvement with measurable progress','Avoid cliches ("I work too hard")'],
       suggestedAnswer: 'Choose strengths that directly apply to the role and support them with a specific example (STAR). For the development area, be genuine and describe concrete steps you are taking — for example, improving public speaking by joining Toastmasters and volunteering for team presentations.'
     },
     {

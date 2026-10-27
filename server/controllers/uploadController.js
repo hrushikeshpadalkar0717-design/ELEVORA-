@@ -224,17 +224,17 @@ const matchTaxonomyAndRoles = (text) => {
   };
 };
 
-// Helper: Extract skills, education, and experience sections
+// Helper: Extract skills, education, experience, and projects sections
 const extractResumeSections = (text, bestField, bestSubfield) => {
   const lower = text.toLowerCase();
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
-  // Extract skills found in text
+  // 1. Extract skills found in text
   const foundSkills = [];
   const fieldConfig = TAXONOMY_MAP[bestField]?.[bestSubfield] || TAXONOMY_MAP['Engineering']['CSE'];
 
   for (const kw of fieldConfig.keywords) {
     if (lower.includes(kw) && kw.length > 2 && !['and', 'the', 'for'].includes(kw)) {
-      // Capitalize nicely
       const cap = kw.charAt(0).toUpperCase() + kw.slice(1);
       if (!foundSkills.includes(cap)) {
         foundSkills.push(cap);
@@ -242,11 +242,12 @@ const extractResumeSections = (text, bestField, bestSubfield) => {
     }
   }
 
-  // Extract common tech skills
+  // Common technical skills
   const commonTech = [
     'Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'React', 'Node.js',
     'HTML', 'CSS', 'SQL', 'Git', 'AWS', 'Docker', 'SolidWorks', 'AutoCAD',
-    'MATLAB', 'Excel', 'Tally', 'Tableau', 'Power BI'
+    'MATLAB', 'Excel', 'Tally', 'Tableau', 'Power BI', 'MongoDB', 'Express',
+    'Next.js', 'Redux', 'PostgreSQL', 'Tailwind CSS', 'Linux', 'Figma'
   ];
   for (const skill of commonTech) {
     if (lower.includes(skill.toLowerCase()) && !foundSkills.includes(skill)) {
@@ -254,30 +255,185 @@ const extractResumeSections = (text, bestField, bestSubfield) => {
     }
   }
 
-  // Simple Education heuristic
-  const degreeMatches = text.match(/(B\.Tech|B\.E\.|M\.Tech|BCA|MCA|B\.Sc|MBBS|BDS|B\.Pharm|MBA|BBA|B\.Com|Diploma)[\w\s.,-]{0,50}/gi);
-  const collegeMatch = text.match(/(?:College|University|Institute|School)[\w\s.,-]{0,50}/gi);
-  const yearMatch = text.match(/\b(201\d|202\d)\b/g);
+  // 2. Education extraction
+  const degreeMatches = text.match(/(B\.Tech|B\.E\.|M\.Tech|BCA|MCA|B\.Sc|MBBS|BDS|B\.Pharm|MBA|BBA|B\.Com|Diploma|Master of|Bachelor of)[\w\s.,-]{0,50}/gi);
+  const collegeMatch = text.match(/(?:College|University|Institute|School|Academy)[\w\s.,-]{0,50}/gi);
+  const yearMatches = text.match(/\b(201\d|202\d)\b/g) || [];
 
   const education = [
     {
+      id: `edu-${Date.now()}-1`,
       degree: degreeMatches?.[0] ? degreeMatches[0].trim() : `${bestSubfield} Degree`,
       branch: bestSubfield,
       college: collegeMatch?.[0] ? collegeMatch[0].trim() : 'University Institute',
       location: 'India',
-      startYear: yearMatch?.[0] || '2020',
-      graduationYear: yearMatch?.[1] || '2024',
+      startYear: yearMatches[0] || '2020',
+      graduationYear: yearMatches[1] || '2024',
       score: '8.2 CGPA',
     },
   ];
 
+  // 3. Experience extraction
+  const experience = [];
+  let inExperienceSection = false;
+  let expLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const isExpHeader = /^(work experience|professional experience|experience|employment history|internship experience|internships)$/i.test(l);
+    const isNextHeader = /^(education|projects|academic projects|skills|certifications|achievements|languages|interests)$/i.test(l);
+
+    if (isExpHeader) {
+      inExperienceSection = true;
+      continue;
+    }
+    if (inExperienceSection && isNextHeader) {
+      inExperienceSection = false;
+      break;
+    }
+    if (inExperienceSection) {
+      expLines.push(l);
+    }
+  }
+
+  // Parse experience lines into distinct jobs
+  if (expLines.length > 0) {
+    let currentJob = null;
+    for (const line of expLines) {
+      // Heuristic for role/company title line
+      const hasDate = /(20\d\d|present|current|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(line);
+      const isRoleLine = /(engineer|developer|intern|analyst|associate|manager|lead|consultant|specialist|designer)/i.test(line);
+
+      if ((isRoleLine || hasDate) && line.length < 90 && !line.startsWith('•') && !line.startsWith('-')) {
+        if (currentJob) experience.push(currentJob);
+        const parts = line.split(/[-–|@]/).map((p) => p.trim());
+        currentJob = {
+          id: `exp-${Date.now()}-${experience.length + 1}`,
+          role: parts[0] || 'Software Engineer',
+          company: parts[1] || 'Technology Company',
+          location: 'Pune / Remote',
+          startDate: '2023',
+          endDate: hasDate && /present|current/i.test(line) ? 'Present' : '2024',
+          currentlyWorking: /present|current/i.test(line),
+          responsibilities: [],
+        };
+      } else if (currentJob) {
+        const cleanBullet = line.replace(/^[•\-*]\s*/, '').trim();
+        if (cleanBullet.length > 8) {
+          currentJob.responsibilities.push(cleanBullet);
+        }
+      }
+    }
+    if (currentJob) experience.push(currentJob);
+  }
+
+  // Fallback experience if text clearly mentioned an internship or prior role
+  if (experience.length === 0 && (lower.includes('intern') || lower.includes('developer') || lower.includes('engineer'))) {
+    experience.push({
+      id: `exp-${Date.now()}-1`,
+      company: 'Tech Solutions Inc.',
+      role: `${bestSubfield} Intern`,
+      location: 'India',
+      startDate: '2023',
+      endDate: '2024',
+      currentlyWorking: false,
+      responsibilities: [
+        `Contributed to core development and project lifecycle initiatives in ${bestSubfield}.`,
+        `Collaborated with team leads to design and implement optimized workflows.`,
+        `Conducted code reviews, testing, and maintained comprehensive documentation.`,
+      ],
+    });
+  }
+
+  // 4. Projects extraction
+  const projects = [];
+  let inProjectSection = false;
+  let projLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const isProjHeader = /^(projects|academic projects|key projects|personal projects|technical projects)$/i.test(l);
+    const isNextHeader = /^(education|experience|work experience|skills|certifications|achievements|languages|interests)$/i.test(l);
+
+    if (isProjHeader) {
+      inProjectSection = true;
+      continue;
+    }
+    if (inProjectSection && isNextHeader) {
+      inProjectSection = false;
+      break;
+    }
+    if (inProjectSection) {
+      projLines.push(l);
+    }
+  }
+
+  if (projLines.length > 0) {
+    let currentProj = null;
+    for (const line of projLines) {
+      const isNewProjTitle = line.length < 65 && !line.startsWith('•') && !line.startsWith('-') && !line.toLowerCase().startsWith('technologies');
+      if (isNewProjTitle && (!currentProj || currentProj.keyFeatures.length > 0 || currentProj.description)) {
+        if (currentProj) projects.push(currentProj);
+        currentProj = {
+          id: `proj-${Date.now()}-${projects.length + 1}`,
+          name: line.replace(/[:|-].*$/, '').trim(),
+          type: 'Technical',
+          role: 'Developer',
+          duration: '3 months',
+          description: line,
+          technologies: foundSkills.slice(0, 4),
+          keyFeatures: [],
+          github: '',
+          liveUrl: '',
+        };
+      } else if (currentProj) {
+        if (/tech(nologies)?|tools|stack/i.test(line)) {
+          const techList = line.replace(/^(technologies|tools|stack|tech stack)[:\s-]*/i, '').split(/[,|]/).map((s) => s.trim()).filter(Boolean);
+          if (techList.length) currentProj.technologies = techList;
+        } else {
+          const clean = line.replace(/^[•\-*]\s*/, '').trim();
+          if (clean.length > 8) {
+            currentProj.keyFeatures.push(clean);
+            if (!currentProj.description || currentProj.description === currentProj.name) {
+              currentProj.description = clean;
+            }
+          }
+        }
+      }
+    }
+    if (currentProj) projects.push(currentProj);
+  }
+
+  // Fallback project if none matched but keywords exist
+  if (projects.length === 0) {
+    const top3Skills = foundSkills.slice(0, 3);
+    projects.push({
+      id: `proj-${Date.now()}-1`,
+      name: `${bestSubfield} Capstone Project`,
+      type: 'Academic',
+      role: 'Project Lead',
+      duration: '4 months',
+      description: `Engineered an end-to-end application integrating modern ${bestSubfield} practices and tools.`,
+      technologies: top3Skills.length ? top3Skills : ['React', 'Node.js', 'MongoDB'],
+      keyFeatures: [
+        'Designed modular architecture ensuring high maintainability and performance.',
+        'Implemented core algorithmic pipelines and data validation mechanisms.',
+        'Created intuitive interactive user interface and comprehensive testing suites.',
+      ],
+      github: '',
+      liveUrl: '',
+    });
+  }
+
   return {
     skills: {
-      technical: foundSkills.slice(0, 10),
-      soft: ['Problem Solving', 'Team Collaboration', 'Communication', 'Adaptability'],
+      technical: foundSkills.slice(0, 12),
+      soft: ['Problem Solving', 'Team Collaboration', 'Communication', 'Adaptability', 'Critical Thinking'],
       tools: ['Git', 'VS Code', 'Microsoft Office'],
     },
     education,
+    experience,
+    projects,
   };
 };
 
@@ -336,6 +492,8 @@ export const parseResumeFile = async (req, res) => {
         summary,
       },
       education: sections.education,
+      experience: sections.experience,
+      projects: sections.projects,
       skills: sections.skills,
       taxonomy: {
         field: taxonomyResult.bestField,

@@ -14,8 +14,6 @@ import {
   RefreshCw,
   Sparkles,
   ChevronRight,
-  Eye,
-  Sliders,
   Palette,
   ArrowLeft
 } from 'lucide-react';
@@ -49,7 +47,6 @@ export const EditResumePage = () => {
 
   const { showToast } = useToast();
 
-  const [activeSection, setActiveSection] = useState('summary');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingDocx, setIsExportingDocx] = useState(false);
   const [editModalSection, setEditModalSection] = useState(null);

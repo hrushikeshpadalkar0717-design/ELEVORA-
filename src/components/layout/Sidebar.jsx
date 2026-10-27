@@ -12,10 +12,7 @@ import {
   ArrowRight,
   X
 } from 'lucide-react';
-import { useResume } from '../../context/ResumeContext';
-
 export const Sidebar = ({ isOpen, onClose }) => {
-  const { profile } = useResume();
   const navigate = useNavigate();
 
   const navItems = [

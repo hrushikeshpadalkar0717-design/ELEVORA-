@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams, NavLink } from 'react-router-dom';
 import {
   Sparkles,
-  CheckCircle2,
   ShieldCheck,
   FileText,
   User,
   Mail,
   Phone,
   Lock,
-  ArrowRight,
   Laptop,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Input, Select } from '../../components/common/Input';
+import { Modal } from '../../components/common/Modal';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../services/api';
@@ -47,6 +50,14 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
     email: '',
     password: '',
   });
+
+  // Forgot password modal state
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotResult, setForgotResult] = useState(null);
 
   // Redirect already authenticated users away from /login and /signup
   useEffect(() => {
@@ -135,9 +146,40 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
       } else if (provider === 'LinkedIn') {
         window.location.href = api.getLinkedInAuthUrl(window.location.origin);
       }
-    } catch (err) {
+    } catch {
       setSocialLoading(null);
       showToast(`Could not initialize ${provider} sign-in`, 'error');
+    }
+  };
+
+  const handleOpenForgotModal = (e) => {
+    e?.preventDefault();
+    setForgotEmail(loginForm.email || '');
+    setForgotSuccess(false);
+    setForgotError('');
+    setForgotResult(null);
+    setIsForgotModalOpen(true);
+  };
+
+  const handleSendPasswordReset = async (e) => {
+    e?.preventDefault();
+    if (!forgotEmail || !forgotEmail.trim()) {
+      setForgotError('Please enter your account email address.');
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError('');
+    try {
+      const res = await api.forgotPassword(forgotEmail.trim());
+      setForgotResult(res);
+      setForgotSuccess(true);
+      showToast(res.message || 'Password reset link sent to your email!', 'success');
+    } catch (err) {
+      setForgotError(err.message || 'Failed to dispatch reset link');
+      showToast(err.message || 'Error sending reset email', 'error');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -329,16 +371,13 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
                   required
                 />
                 <div className="text-right mt-1">
-                  <a
-                    href="#forgot"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      showToast('Please contact support or sign in with your email / password.', 'info');
-                    }}
-                    className="text-xs text-blue-600 hover:underline"
+                  <button
+                    type="button"
+                    onClick={handleOpenForgotModal}
+                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium cursor-pointer"
                   >
                     Forgot Password?
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -435,6 +474,142 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        title={forgotSuccess ? 'Reset Link Dispatched' : 'Reset Your Password'}
+        subtitle={forgotSuccess ? 'Check your email inbox' : 'Enter your registered email to receive a reset link'}
+        maxWidth="max-w-md"
+      >
+        {forgotSuccess ? (
+          <div className="py-2 text-center animate-in fade-in">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-emerald-100 shadow-sm">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <h4 className="text-base font-bold text-slate-800 mb-1">Check Your Inbox</h4>
+            <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+              We dispatched a password reset link to <strong className="text-slate-900">{forgotEmail}</strong>. Follow the link to choose a new password. The link is valid for 30 minutes.
+            </p>
+
+            {/* Sandbox helper when real SMTP credentials are not yet configured */}
+            {!forgotResult?.isRealSmtp && (
+              <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/80 text-xs text-blue-900 text-left mb-4 shadow-xs">
+                <div className="flex items-center gap-1.5 font-bold text-blue-800 mb-1">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Developer Sandbox Active</span>
+                </div>
+                <p className="text-blue-700 leading-relaxed mb-2.5">
+                  Real SMTP is not configured in <code className="bg-blue-100/80 px-1 py-0.5 rounded text-[11px] font-mono">server/.env</code>. The reset email was caught by the local test sandbox.
+                </p>
+                <div className="space-y-1.5 pt-1 border-t border-blue-200/60">
+                  {forgotResult?.previewUrl && (
+                    <a
+                      href={forgotResult.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      View Sent Email in Ethereal Sandbox →
+                    </a>
+                  )}
+                  {forgotResult?.resetUrl && (
+                    <a
+                      href={forgotResult.resetUrl}
+                      className="block text-indigo-600 hover:text-indigo-800 font-bold hover:underline"
+                    >
+                      🔑 Open Password Reset Page Directly →
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 text-left mb-5">
+              💡 <strong>Tip for real delivery:</strong> To send emails directly to your Gmail inbox, add <code className="bg-slate-200 px-1 py-0.5 rounded text-[10px]">EMAIL_USER</code> and a Google App Password (<code className="bg-slate-200 px-1 py-0.5 rounded text-[10px]">EMAIL_PASS</code>) to <code className="bg-slate-200 px-1 py-0.5 rounded text-[10px]">server/.env</code>.
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleSendPasswordReset}
+                disabled={forgotLoading}
+                className="flex-1 text-xs"
+              >
+                {forgotLoading ? 'Resending...' : 'Resend Link'}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                onClick={() => setIsForgotModalOpen(false)}
+                className="flex-1 text-xs font-semibold"
+              >
+                Back to Sign In
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSendPasswordReset} className="space-y-4">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Enter the email address associated with your account, and we'll send you a secure link to create a new password.
+            </p>
+
+            {forgotError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            <Input
+              label="Email Address"
+              type="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              placeholder="username@gmail.com"
+              icon={Mail}
+              required
+              autoFocus
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                onClick={() => setIsForgotModalOpen(false)}
+                disabled={forgotLoading}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                type="submit"
+                disabled={forgotLoading}
+                className="text-xs font-bold shadow-sm flex items-center justify-center gap-2"
+              >
+                {forgotLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending Link...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Send Reset Link</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };

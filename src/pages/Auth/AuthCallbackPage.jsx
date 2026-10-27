@@ -46,11 +46,23 @@ export const AuthCallbackPage = () => {
       }
 
       try {
-        await loginWithToken(token);
+        const user = await loginWithToken(token);
         setStatus('success');
         const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-        showToast(`Welcome! Successfully logged in with ${providerName}.`, 'success');
-        setTimeout(() => navigate('/dashboard'), 800);
+
+        // Check if user needs to input mobile number, field, subfield prior to reaching dashboard
+        const needsOnboardingParam = searchParams.get('needsOnboarding') === 'true';
+        const isNewParam = searchParams.get('isNew') === 'true';
+        const missingContact = !user?.phone || user?.phone.trim() === '';
+        const shouldCompleteProfile = needsOnboardingParam || isNewParam || missingContact;
+
+        if (shouldCompleteProfile) {
+          showToast(`Welcome! Please complete your contact and domain details before entering your dashboard.`, 'info');
+          setTimeout(() => navigate('/complete-profile', { replace: true }), 800);
+        } else {
+          showToast(`Welcome! Successfully logged in with ${providerName}.`, 'success');
+          setTimeout(() => navigate('/dashboard', { replace: true }), 800);
+        }
       } catch (err) {
         console.error('Callback error:', err);
         setStatus('error');

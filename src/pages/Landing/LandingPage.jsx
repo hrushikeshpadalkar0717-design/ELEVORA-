@@ -9,12 +9,12 @@ import {
   ShieldCheck,
   FileText,
   MessageSquareCode,
-  Zap,
-  Users,
   Award
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 export const LandingPage = () => {
   const navigate = useNavigate();
@@ -322,7 +322,7 @@ export const LandingPage = () => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-900">ELEVORA</span>
-            <span>© {new Date().getFullYear()} All rights reserved.</span>
+            <span>© {CURRENT_YEAR} All rights reserved.</span>
           </div>
           <div className="flex gap-6">
             <a href="#features" className="hover:text-slate-800">Features</a>

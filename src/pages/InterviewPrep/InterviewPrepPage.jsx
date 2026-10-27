@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import {
@@ -12,7 +12,7 @@ import {
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
-import { defaultInterviewQuestions, getQuestionsForRole } from '../../data/interviewData';
+import { getQuestionsForRole } from '../../data/interviewData';
 import { aiService } from '../../services/aiService';
 
 export const InterviewPrepPage = () => {
@@ -29,19 +29,13 @@ export const InterviewPrepPage = () => {
     return roles.filter((r) => r && r.trim() !== '');
   }, [careerGoal]);
 
-  const [selectedRole, setSelectedRole] = useState(() => savedRoles[0] || '');
+  const [rawSelectedRole, setRawSelectedRole] = useState(() => savedRoles[0] || '');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [expandedId, setExpandedId] = useState(null);
+  const [userExpandedId, setUserExpandedId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Keep selectedRole in sync if savedRoles changes (e.g. after profile update)
-  useEffect(() => {
-    if (savedRoles.length > 0 && !savedRoles.includes(selectedRole)) {
-      setSelectedRole(savedRoles[0]);
-      setActiveCategory('All');
-      setExpandedId(null);
-    }
-  }, [savedRoles]);
+  // Derive current role: prefer user selection if valid, else default to first saved role
+  const selectedRole = savedRoles.includes(rawSelectedRole) ? rawSelectedRole : (savedRoles[0] || '');
 
   // Questions map: role → question[]  (allows AI-generated additions per session)
   const [questionsMap, setQuestionsMap] = useState({});
@@ -61,19 +55,17 @@ export const InterviewPrepPage = () => {
     );
   }, [roleQuestions, activeCategory]);
 
-  // Auto-open first question when role or category changes
-  useEffect(() => {
-    setExpandedId(filteredQuestions[0]?.id || null);
-  }, [selectedRole, activeCategory]);
+  // Derive expanded question: defaults to first question in list if user has not explicitly toggled
+  const expandedId = userExpandedId !== null ? userExpandedId : (filteredQuestions[0]?.id || null);
 
   const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
+    setUserExpandedId(expandedId === id ? false : id);
   };
 
   const handleRoleChange = (role) => {
-    setSelectedRole(role);
+    setRawSelectedRole(role);
     setActiveCategory('All');
-    setExpandedId(null);
+    setUserExpandedId(null);
   };
 
   const handleGenerateAIQuestion = async () => {
@@ -94,7 +86,7 @@ export const InterviewPrepPage = () => {
         ...prev,
         [selectedRole]: [newQ, ...(prev[selectedRole] || getQuestionsForRole(selectedRole, userField, userSubfield))]
       }));
-      setExpandedId(newQ.id);
+      setUserExpandedId(newQ.id);
       showToast('New AI interview question generated!', 'success');
     } catch {
       showToast('Error generating question. Please try again.', 'error');
@@ -197,7 +189,10 @@ export const InterviewPrepPage = () => {
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
+                onClick={() => {
+                  setActiveCategory(cat);
+                  setUserExpandedId(null);
+                }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   activeCategory === cat
                     ? 'bg-blue-600 text-white shadow-sm'

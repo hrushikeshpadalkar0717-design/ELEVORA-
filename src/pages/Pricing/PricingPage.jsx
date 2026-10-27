@@ -11,7 +11,6 @@ import {
   Shield,
   Info
 } from 'lucide-react';
-import { Button } from '../../components/common/Button';
 import { useToast } from '../../context/ToastContext';
 
 // ─── Plan definitions ────────────────────────────────────────────────────────

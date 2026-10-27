@@ -5,7 +5,8 @@ import { Resume } from '../models/Resume.js';
 export const getUserResumes = async (req, res) => {
   try {
     const resumes = await Resume.find({ user: req.user._id }).sort({ updatedAt: -1 });
-    res.json(resumes);
+    const formatted = resumes.map((doc) => doc.toJSON());
+    res.json(formatted);
   } catch (error) {
     console.error('Get resumes error:', error);
     res.status(500).json({ message: 'Error retrieving resumes' });
@@ -16,11 +17,16 @@ export const getUserResumes = async (req, res) => {
 // @route   GET /api/resumes/:id
 export const getResumeById = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
+    const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(404).json({ message: 'Resume not found (invalid ID format)' });
+    }
+
+    const resume = await Resume.findOne({ _id: id, user: req.user._id });
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
     }
-    res.json(resume);
+    res.json(resume.toJSON());
   } catch (error) {
     console.error('Get resume error:', error);
     res.status(500).json({ message: 'Error retrieving resume' });
@@ -31,13 +37,24 @@ export const getResumeById = async (req, res) => {
 // @route   POST /api/resumes
 export const createResume = async (req, res) => {
   try {
+    const rawData = { ...req.body };
+    // Remove client-only or non-ObjectId _id/id to avoid CastError
+    if (rawData._id && !rawData._id.toString().match(/^[0-9a-fA-F]{24}$/)) {
+      delete rawData._id;
+    }
+    if (rawData.id && !rawData.id.toString().match(/^[0-9a-fA-F]{24}$/)) {
+      delete rawData.id;
+    }
+
     const resumeData = {
-      ...req.body,
+      ...rawData,
       user: req.user._id,
+      name: rawData.name || rawData.title || 'My Professional Resume',
+      title: rawData.name || rawData.title || 'My Professional Resume',
     };
 
     const resume = await Resume.create(resumeData);
-    res.status(201).json(resume);
+    res.status(201).json(resume.toJSON());
   } catch (error) {
     console.error('Create resume error:', error);
     res.status(500).json({ message: error.message || 'Error creating resume' });
@@ -48,14 +65,23 @@ export const createResume = async (req, res) => {
 // @route   PUT /api/resumes/:id
 export const updateResume = async (req, res) => {
   try {
-    let resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
+    const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    let resume = await Resume.findOne({ _id: id, user: req.user._id });
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
     }
 
-    Object.assign(resume, req.body);
+    const updates = { ...req.body };
+    delete updates._id;
+    delete updates.user;
+
+    Object.assign(resume, updates);
     const updated = await resume.save();
-    res.json(updated);
+    res.json(updated.toJSON());
   } catch (error) {
     console.error('Update resume error:', error);
     res.status(500).json({ message: error.message || 'Error updating resume' });
@@ -66,7 +92,12 @@ export const updateResume = async (req, res) => {
 // @route   DELETE /api/resumes/:id
 export const deleteResume = async (req, res) => {
   try {
-    const resume = await Resume.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    const resume = await Resume.findOneAndDelete({ _id: id, user: req.user._id });
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
     }
@@ -86,26 +117,35 @@ export const syncResumes = async (req, res) => {
       return res.status(400).json({ message: 'Resumes array required' });
     }
 
-    // Upsert or replace resumes for this user
+    // Upsert or create resumes for this user
     for (const r of resumes) {
-      if (r._id && r._id.match(/^[0-9a-fA-F]{24}$/)) {
+      const cleanData = { ...r };
+      const hasValidId = cleanData._id && cleanData._id.toString().match(/^[0-9a-fA-F]{24}$/);
+      if (!hasValidId) {
+        delete cleanData._id;
+        delete cleanData.id;
+      }
+
+      if (hasValidId) {
         await Resume.findOneAndUpdate(
-          { _id: r._id, user: req.user._id },
-          { ...r, user: req.user._id },
+          { _id: cleanData._id, user: req.user._id },
+          { ...cleanData, user: req.user._id },
           { upsert: true, new: true }
         );
       } else {
         await Resume.create({
-          ...r,
+          ...cleanData,
           user: req.user._id,
         });
       }
     }
 
     const updatedList = await Resume.find({ user: req.user._id }).sort({ updatedAt: -1 });
-    res.json(updatedList);
+    const formattedList = updatedList.map((doc) => doc.toJSON());
+    res.json(formattedList);
   } catch (error) {
     console.error('Sync resumes error:', error);
     res.status(500).json({ message: 'Error syncing resumes' });
   }
 };
+

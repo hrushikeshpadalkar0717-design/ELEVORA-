@@ -7,15 +7,9 @@ import {
   ArrowLeft,
   Sparkles,
   CheckCircle2,
-  User,
   Mail,
   Phone,
   MapPin,
-  Globe,
-  Briefcase,
-  GraduationCap,
-  FolderKanban,
-  Award,
   Loader2
 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';

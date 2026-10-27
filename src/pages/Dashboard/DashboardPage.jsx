@@ -2,19 +2,21 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
+import { Modal } from '../../components/common/Modal';
 import {
   UploadCloud,
   Search,
   CheckCircle2,
   FileText,
-  User,
   ArrowRight,
-  Briefcase,
   Sparkles,
   Loader2,
   Edit3,
-  Tag
+  Tag,
+  GraduationCap,
+  Briefcase,
+  Code2,
+  Award
 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
@@ -43,6 +45,8 @@ export const DashboardPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [importedResult, setImportedResult] = useState(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Filtered roles based on search
   const filteredRoles = dynamicRolesList.filter((r) =>
@@ -93,6 +97,8 @@ export const DashboardPage = () => {
       if (result?.taxonomy?.recommendedRoles?.length) {
         setSelectedRoles(result.taxonomy.recommendedRoles);
       }
+      setImportedResult(result);
+      setIsImportModalOpen(true);
       showToast(
         result?.message || `Successfully extracted profile & matched roles from ${file.name}!`,
         'success'
@@ -182,21 +188,30 @@ export const DashboardPage = () => {
               </p>
 
               {uploadedFileName && (
-                <div className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium">
-                  <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="truncate">{uploadedFileName}</span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 ml-auto shrink-0" />
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium">
+                  <div className="flex items-center gap-2 truncate">
+                    <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="truncate">{uploadedFileName}</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="text-blue-700 font-bold hover:underline shrink-0 text-left sm:text-right cursor-pointer"
+                  >
+                    View Edit Options &rarr;
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               className="hidden"
             />
             <Button
@@ -207,8 +222,19 @@ export const DashboardPage = () => {
               onClick={() => fileInputRef.current?.click()}
               className="w-full sm:w-auto"
             >
-              {isUploading ? 'Extracting Resume...' : 'Upload Resume'}
+              {isUploading ? 'Extracting Resume...' : uploadedFileName ? 'Re-upload Resume' : 'Upload Resume'}
             </Button>
+            {uploadedFileName && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Edit3}
+                onClick={() => navigate('/create-resume/basics')}
+                className="w-full sm:w-auto"
+              >
+                Go to Resume Builder
+              </Button>
+            )}
           </div>
         </Card>
       </div>
@@ -297,6 +323,181 @@ export const DashboardPage = () => {
           </Button>
         </div>
       </Card>
+
+      {/* Auto-Fill Confirmation & Edit Options Modal */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Resume Imported & Auto-Filled! 🎉"
+        size="lg"
+      >
+        <div className="space-y-5 text-left">
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your resume was analyzed and all extracted details have been populated into your resume builder. You can edit any individual section below, or jump directly to the final review and template generator.
+          </p>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Candidate</span>
+              <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{importedResult?.profile?.fullName || profile?.fullName}</p>
+            </div>
+            <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Specialization</span>
+              <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{importedResult?.taxonomy?.subfield || profile?.subfield}</p>
+            </div>
+            <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Education</span>
+              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                {importedResult?.education?.length || 1} {importedResult?.education?.length === 1 ? 'Degree' : 'Degrees'}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Tech Skills</span>
+              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                {importedResult?.skills?.technical?.length || 8} Skills
+              </p>
+            </div>
+          </div>
+
+          {/* Section Edit Options */}
+          <div>
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5">
+              Jump to Edit Specific Sections:
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/basics');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <span>1. Basics & Contact Info</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/career');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <span>2. Career Goal & Summary</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/education');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                  </div>
+                  <span>3. Education & Degrees</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/projects');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                    <Code2 className="w-3.5 h-3.5" />
+                  </div>
+                  <span>4. Academic & Work Projects</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/experience');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-3.5 h-3.5" />
+                  </div>
+                  <span>5. Experience & Internships</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  navigate('/create-resume/skills');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition text-xs font-semibold text-slate-800 group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center shrink-0">
+                    <Award className="w-3.5 h-3.5" />
+                  </div>
+                  <span>6. Technical & Soft Skills</span>
+                </div>
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsImportModalOpen(false);
+                navigate('/create-resume/basics');
+              }}
+              className="w-full sm:w-auto text-xs"
+            >
+              Start from Step 1 (Basics)
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              iconRight={ArrowRight}
+              onClick={() => {
+                setIsImportModalOpen(false);
+                navigate('/create-resume/review');
+              }}
+              className="w-full sm:w-auto text-xs"
+            >
+              Review All & Generate Resume
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

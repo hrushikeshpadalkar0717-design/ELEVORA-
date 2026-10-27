@@ -4,7 +4,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
-import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, Award, Trophy, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, Award, Trophy, ExternalLink } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
 import { ensureUrl } from '../../utils/linkUtils';

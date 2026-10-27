@@ -1,6 +1,6 @@
 import React from 'react';
-import { Mail, Phone, MapPin, Globe, ExternalLink } from 'lucide-react';
-import { LinkedinIcon, GithubIcon } from '../common/BrandIcons';
+import { Globe, ExternalLink } from 'lucide-react';
+import { GithubIcon } from '../common/BrandIcons';
 import { ensureUrl, formatDisplayUrl } from '../../utils/linkUtils';
 
 export const TemplateCorporateBlue = ({ data }) => {

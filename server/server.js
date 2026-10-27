@@ -18,8 +18,9 @@ const app = express();
 
 // Allowed frontend origins
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5174',
+  process.env.CLIENT_URL || 'http://localhost:5173',
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:3000',
 ];
 
@@ -56,7 +57,7 @@ app.use('/api/resumes', resumeRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Error Handling Middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Server Unhandled Error:', err.stack);
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',

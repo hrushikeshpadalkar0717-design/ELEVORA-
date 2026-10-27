@@ -58,6 +58,30 @@ export const api = {
     return data;
   },
 
+  // Auth: Forgot Password (request email reset link)
+  async forgotPassword(email) {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to request password reset');
+    return data;
+  },
+
+  // Auth: Reset Password (using token from email link)
+  async resetPassword(token, password) {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password/${encodeURIComponent(token)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to reset password');
+    return data;
+  },
+
   // Auth: Logout (Clears HttpOnly cookie & local token)
   async logout() {
     try {
@@ -109,6 +133,23 @@ export const api = {
     return data;
   },
 
+  // OAuth: Direct OAuth payload handler (fallback if called programmatically)
+  async googleAuth(payload) {
+    if (payload?.token) {
+      localStorage.setItem('elevora_auth_token', payload.token);
+      return await this.getMe();
+    }
+    return payload;
+  },
+
+  async linkedinAuth(payload) {
+    if (payload?.token) {
+      localStorage.setItem('elevora_auth_token', payload.token);
+      return await this.getMe();
+    }
+    return payload;
+  },
+
   // Resumes: Get All
   async getResumes() {
     const res = await fetch(`${API_BASE_URL}/resumes`, {
@@ -116,7 +157,15 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) throw new Error('Failed to fetch resumes');
-    return await res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return data.map((r) => ({
+        ...r,
+        id: r.id || r._id,
+        name: r.name || r.title || 'My Professional Resume',
+      }));
+    }
+    return data;
   },
 
   // Resumes: Create or Save
@@ -129,7 +178,11 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to save resume');
-    return data;
+    return {
+      ...data,
+      id: data.id || data._id,
+      name: data.name || data.title,
+    };
   },
 
   // Resumes: Update
@@ -142,7 +195,11 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to update resume');
-    return data;
+    return {
+      ...data,
+      id: data.id || data._id,
+      name: data.name || data.title,
+    };
   },
 
   // Resumes: Delete
@@ -154,6 +211,26 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to delete resume');
+    return data;
+  },
+
+  // Resumes: Batch Sync
+  async syncResumes(resumes) {
+    const res = await fetch(`${API_BASE_URL}/resumes/sync`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ resumes }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to sync resumes');
+    if (Array.isArray(data)) {
+      return data.map((r) => ({
+        ...r,
+        id: r.id || r._id,
+        name: r.name || r.title || 'My Professional Resume',
+      }));
+    }
     return data;
   },
 

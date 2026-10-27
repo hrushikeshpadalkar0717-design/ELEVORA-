@@ -2,15 +2,25 @@ import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { TextArea } from '../common/Input';
-import { Sparkles, ArrowRight, Check } from 'lucide-react';
+import { Sparkles, Check } from 'lucide-react';
 import { aiService } from '../../services/aiService';
 import { useToast } from '../../context/ToastContext';
 
 export const AIEnhanceModal = ({ isOpen, onClose, initialText = '', onApply, field = '', subfield = '', role = '' }) => {
   const [inputText, setInputText] = useState(initialText);
+  const [prevInitial, setPrevInitial] = useState({ text: initialText, open: isOpen });
   const [enhancedText, setEnhancedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
+
+  // Synchronize state when modal is opened or initialText changes
+  if (prevInitial.text !== initialText || prevInitial.open !== isOpen) {
+    setPrevInitial({ text: initialText, open: isOpen });
+    if (isOpen) {
+      setInputText(initialText || '');
+      setEnhancedText('');
+    }
+  }
 
   const handleEnhance = async () => {
     if (!inputText.trim()) {

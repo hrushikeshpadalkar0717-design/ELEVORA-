@@ -9,6 +9,8 @@ import {
   linkedinCallback,
   getCurrentUser,
   updateUserProfile,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -18,6 +20,8 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:token', resetPassword);
 
 // ── Google OAuth (Authorization Code Flow) ────────────────────────────────────
 router.get('/google', googleAuthRedirect);             // 1. Redirect user to Google

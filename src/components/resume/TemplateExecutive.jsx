@@ -210,6 +210,19 @@ export const TemplateExecutive = ({ data }) => {
                 </ul>
               </div>
             )}
+            {achievements?.length > 0 && (
+              <div className="mt-3 text-slate-700">
+                <strong>Key Honors & Achievements:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                  {achievements.map((a) => (
+                    <li key={a.id}>
+                      <span className="font-semibold">{a.title}</span>
+                      {a.description && ` — ${a.description}`} ({a.year})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
       </div>

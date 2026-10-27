@@ -4,7 +4,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input, Select } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
-import { ArrowLeft, ArrowRight, Plus, X, Globe, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
 

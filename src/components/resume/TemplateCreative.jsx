@@ -253,6 +253,26 @@ export const TemplateCreative = ({ data }) => {
             ))}
           </section>
         )}
+
+        {/* Achievements */}
+        {achievements && achievements.length > 0 && (
+          <section>
+            <h2 className="text-xs font-black uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-2">
+              Honors & Achievements
+            </h2>
+            <div className="space-y-1.5">
+              {achievements.map((ach) => (
+                <div key={ach.id} className="flex items-start justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800">{ach.title}</span>
+                    {ach.description && <p className="text-slate-500 text-[11px]">{ach.description}</p>}
+                  </div>
+                  {ach.year && <span className="text-[11px] text-indigo-600 font-semibold shrink-0 ml-2">{ach.year}</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

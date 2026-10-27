@@ -8,9 +8,7 @@ import {
   Phone,
   MapPin,
   Globe,
-  CheckCircle2,
-  Camera,
-  Sparkles
+  Camera
 } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';

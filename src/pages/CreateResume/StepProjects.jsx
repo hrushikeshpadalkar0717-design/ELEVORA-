@@ -5,7 +5,7 @@ import { Button } from '../../components/common/Button';
 import { Input, TextArea, Select } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import { EmptyState } from '../../components/common/EmptyState';
-import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, FolderKanban, Sparkles, ExternalLink, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Edit3, Trash2, FolderKanban, ExternalLink, Globe } from 'lucide-react';
 import { GithubIcon } from '../../components/common/BrandIcons';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';

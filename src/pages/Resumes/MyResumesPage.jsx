@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -6,19 +6,18 @@ import { Modal } from '../../components/common/Modal';
 import { ResumePreview } from '../../components/resume/ResumePreview';
 import {
   Plus,
-  FileText,
   Clock,
-  Sparkles,
   Download,
   Copy,
   Trash2,
   Edit3,
   Eye,
-  CheckCircle2,
   FolderOpen,
   Search,
   X,
-  Tag
+  Tag,
+  UploadCloud,
+  Loader2,
 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
@@ -34,6 +33,7 @@ export const MyResumesPage = () => {
     duplicateSavedResume,
     setActiveTemplate,
     setActiveResumeId,
+    uploadAndApplyResume,
     profile
   } = resumeContext;
   const { showToast } = useToast();
@@ -43,6 +43,36 @@ export const MyResumesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState(null);
   const [exportTargetResume, setExportTargetResume] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
+
+  const handleImportResume = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(pdf|docx|doc)$/i)) {
+      showToast('Please upload a PDF or DOCX file', 'error');
+      return;
+    }
+
+    setIsImporting(true);
+    showToast(`Analyzing & extracting resume: ${file.name}...`, 'info');
+
+    try {
+      const result = await uploadAndApplyResume(file);
+      showToast(
+        result?.message || `Successfully imported ${file.name}! All sections auto-filled.`,
+        'success'
+      );
+      navigate('/create-resume/basics');
+    } catch (err) {
+      console.warn('Import error:', err);
+      showToast(err.message || 'Failed to extract resume file.', 'error');
+    } finally {
+      setIsImporting(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  };
 
   // Derive the field label for a resume — use stored metadata, then infer from title, then neutral
   const getFieldLabel = (resume) => {
@@ -146,15 +176,33 @@ export const MyResumesPage = () => {
           )}
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          icon={Plus}
-          onClick={() => navigate('/create-resume/basics')}
-          className="shadow-md shadow-blue-500/20"
-        >
-          Create New Resume
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <input
+            type="file"
+            ref={importInputRef}
+            onChange={handleImportResume}
+            accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="md"
+            icon={isImporting ? Loader2 : UploadCloud}
+            isLoading={isImporting}
+            onClick={() => importInputRef.current?.click()}
+          >
+            {isImporting ? 'Importing...' : 'Import Resume'}
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            icon={Plus}
+            onClick={() => navigate('/create-resume/basics')}
+            className="shadow-md shadow-blue-500/20"
+          >
+            Create New Resume
+          </Button>
+        </div>
       </div>
 
       {/* Search bar — only show when there are resumes */}
@@ -187,11 +235,20 @@ export const MyResumesPage = () => {
           </div>
           <h3 className="text-base font-bold text-slate-800">No resumes created yet</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Build your first ATS-optimized resume using our guided multi-step builder.
+            Build your first ATS-optimized resume using our guided multi-step builder or import an existing PDF/DOCX to auto-fill your details.
           </p>
-          <div>
-            <Button variant="primary" size="sm" onClick={() => navigate('/create-resume/basics')}>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/create-resume/basics')}>
               Create Your First Resume
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={isImporting ? Loader2 : UploadCloud}
+              isLoading={isImporting}
+              onClick={() => importInputRef.current?.click()}
+            >
+              Import Existing Resume
             </Button>
           </div>
         </Card>

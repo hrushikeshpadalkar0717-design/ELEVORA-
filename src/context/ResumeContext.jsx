@@ -107,18 +107,17 @@ export const ResumeProvider = ({ children }) => {
               setCareerGoal((prev) => ({ ...prev, ...userData.careerGoal }));
             }
 
-            // Also load saved resumes from MongoDB
+            // Also load saved resumes from MongoDB - strictly isolated to current authenticated user
             const dbResumes = await api.getResumes();
-            if (Array.isArray(dbResumes) && dbResumes.length > 0) {
-              setSavedResumes(dbResumes);
-            }
+            setSavedResumes(Array.isArray(dbResumes) ? dbResumes : []);
           }
-        } catch (apiErr) {
+        } catch {
           // If server says not authenticated, ensure local storage and state reflect logged out
           if (localStorage.getItem('elevora_auth_token')) {
             localStorage.removeItem('elevora_auth_token');
           }
           setIsAuthenticated(false);
+          setSavedResumes([]);
         }
       } catch (err) {
         console.error('Error loading stored state:', err);
@@ -195,11 +194,10 @@ export const ResumeProvider = ({ children }) => {
 
     try {
       const dbResumes = await api.getResumes();
-      if (Array.isArray(dbResumes) && dbResumes.length > 0) {
-        setSavedResumes(dbResumes);
-      }
+      setSavedResumes(Array.isArray(dbResumes) ? dbResumes : []);
     } catch (e) {
       console.warn('Resume load notice on login:', e.message);
+      setSavedResumes([]);
     }
 
     return serverUser;
@@ -226,14 +224,26 @@ export const ResumeProvider = ({ children }) => {
     const serverUser = await api.register(payload);
     setIsAuthenticated(true);
 
-    setProfile((prev) => ({
-      ...prev,
+    // Isolate new user: Clear any previous user's cached resumes and resume builder entries
+    setSavedResumes([]);
+    setEducation([]);
+    setExperience([]);
+    setProjects([]);
+    setCertifications([]);
+    setAchievements([]);
+
+    setProfile({
       fullName: serverUser?.fullName || payload.fullName,
       email: serverUser?.email || payload.email,
       phone: serverUser?.phone || payload.phone,
       field: serverUser?.field || payload.field,
       subfield: serverUser?.subfield || payload.subfield,
-    }));
+      location: '',
+      linkedin: '',
+      portfolio: '',
+      github: '',
+      avatar: serverUser?.avatar || '',
+    });
 
     return serverUser;
   };
@@ -328,11 +338,10 @@ export const ResumeProvider = ({ children }) => {
 
     try {
       const dbResumes = await api.getResumes();
-      if (Array.isArray(dbResumes) && dbResumes.length > 0) {
-        setSavedResumes(dbResumes);
-      }
+      setSavedResumes(Array.isArray(dbResumes) ? dbResumes : []);
     } catch (e) {
       console.warn('Resume sync notice:', e.message);
+      setSavedResumes([]);
     }
 
     return serverUser;
@@ -346,6 +355,25 @@ export const ResumeProvider = ({ children }) => {
       console.warn('Logout notice:', e.message);
     }
     localStorage.removeItem('elevora_auth_token');
+    localStorage.removeItem(STORAGE_KEY);
+    setSavedResumes([]);
+    setProfile({
+      fullName: '',
+      email: '',
+      phone: '',
+      field: 'Engineering',
+      subfield: 'CSE',
+      location: '',
+      linkedin: '',
+      portfolio: '',
+      github: '',
+      avatar: '',
+    });
+    setEducation([]);
+    setExperience([]);
+    setProjects([]);
+    setCertifications([]);
+    setAchievements([]);
   };
 
   // Profile update with background backend sync
@@ -394,6 +422,14 @@ export const ResumeProvider = ({ children }) => {
 
       if (result.education && result.education.length > 0) {
         setEducation(result.education);
+      }
+
+      if (result.experience && result.experience.length > 0) {
+        setExperience(result.experience);
+      }
+
+      if (result.projects && result.projects.length > 0) {
+        setProjects(result.projects);
       }
 
       if (result.skills) {
@@ -544,24 +580,46 @@ export const ResumeProvider = ({ children }) => {
 
   // Resumes list management
   const createSavedResume = (name, targetRole, template = 'modern', field = '', subfield = '') => {
-    const resolvedRole = targetRole || careerGoal.targetRoles[0] || profile.subfield || profile.field || 'Professional';
-    const resolvedField = field || profile.field || '';
-    const resolvedSubfield = subfield || profile.subfield || '';
+    const resolvedRole = targetRole || careerGoal?.targetRoles?.[0] || profile?.subfield || profile?.field || 'Professional';
+    const resolvedField = field || profile?.field || 'Engineering';
+    const resolvedSubfield = subfield || profile?.subfield || 'CSE';
     const newResume = {
       id: 'res-' + Date.now(),
       name: name || `${resolvedRole} Resume`,
+      title: name || `${resolvedRole} Resume`,
       targetRole: resolvedRole,
       field: resolvedField,
       subfield: resolvedSubfield,
       template: template || activeTemplate,
       lastUpdated: 'Just now',
-      atsScore: 92,
-      keywordMatch: 88,
-      suggestions: 2
+      atsScore: atsAnalysis?.score || 92,
+      keywordMatch: atsAnalysis?.keywordMatch || 88,
+      suggestions: atsAnalysis?.suggestionsCount || 2,
+      profile,
+      careerGoal,
+      education,
+      experience,
+      projects,
+      skills,
+      certifications,
+      achievements,
     };
     setSavedResumes((prev) => [newResume, ...prev]);
     setActiveResumeId(newResume.id);
     setActiveTemplate(newResume.template);
+
+    // Persist to MongoDB in background if authenticated
+    api.saveResume(newResume).then((saved) => {
+      if (saved && saved.id) {
+        setSavedResumes((prev) =>
+          prev.map((r) => (r.id === newResume.id ? { ...r, id: saved.id, _id: saved.id } : r))
+        );
+        setActiveResumeId(saved.id);
+      }
+    }).catch((err) => {
+      console.warn('Backend resume save notice (saved locally):', err.message);
+    });
+
     return newResume;
   };
 
@@ -569,10 +627,17 @@ export const ResumeProvider = ({ children }) => {
     setSavedResumes((prev) =>
       prev.map((r) => (r.id === id ? { ...r, ...updates, lastUpdated: 'Just now' } : r))
     );
+    // Sync to backend if it's a valid MongoDB ID
+    if (id && id.match(/^[0-9a-fA-F]{24}$/)) {
+      api.updateResume(id, updates).catch(() => {});
+    }
   };
 
   const deleteSavedResume = (id) => {
     setSavedResumes((prev) => prev.filter((r) => r.id !== id));
+    if (id && id.match(/^[0-9a-fA-F]{24}$/)) {
+      api.deleteResume(id).catch(() => {});
+    }
   };
 
   const duplicateSavedResume = (id) => {
@@ -582,9 +647,19 @@ export const ResumeProvider = ({ children }) => {
       ...original,
       id: 'res-' + Date.now(),
       name: `${original.name} (Copy)`,
-      lastUpdated: 'Just now'
+      lastUpdated: 'Just now',
     };
+    delete duplicated._id;
     setSavedResumes((prev) => [duplicated, ...prev]);
+
+    api.saveResume(duplicated).then((saved) => {
+      if (saved && saved.id) {
+        setSavedResumes((prev) =>
+          prev.map((r) => (r.id === duplicated.id ? { ...r, id: saved.id, _id: saved.id } : r))
+        );
+      }
+    }).catch(() => {});
+
     return duplicated;
   };
 

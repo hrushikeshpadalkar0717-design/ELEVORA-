@@ -660,7 +660,7 @@ export const aiService = {
    * Generates a professional summary tailored to field, subfield, and career stage.
    * Uses field-appropriate skills and domain-specific templates.
    */
-  async generateSummary({ role, stage, skills, experience, projects, field, subfield }) {
+  async generateSummary({ role, stage, skills, experience: _experience, projects: _projects, field, subfield }) {
     await delay(900);
     const cfg = getDomainConfig(field, subfield);
     // Use field-aware skill selection to avoid showing skills from wrong domains

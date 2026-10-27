@@ -10,6 +10,8 @@ import { AppLayout } from './components/layout/AppLayout';
 import { LandingPage } from './pages/Landing/LandingPage';
 import { AuthPage } from './pages/Auth/AuthPage';
 import { AuthCallbackPage } from './pages/Auth/AuthCallbackPage';
+import { CompleteProfilePage } from './pages/Auth/CompleteProfilePage';
+import { ResetPasswordPage } from './pages/Auth/ResetPasswordPage';
 
 // Authenticated Pages
 import { DashboardPage } from './pages/Dashboard/DashboardPage';
@@ -43,6 +45,8 @@ export default function App() {
             <Route path="/login" element={<AuthPage initialMode="login" />} />
             <Route path="/signup" element={<AuthPage initialMode="signup" />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/complete-profile" element={<CompleteProfilePage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
             {/* Authenticated Application */}
             <Route element={<AppLayout />}>

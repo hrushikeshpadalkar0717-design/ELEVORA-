@@ -4,14 +4,11 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import {
-  Settings,
   User,
   Lock,
   Bell,
   Sparkles,
-  Shield,
-  Trash2,
-  CheckCircle2
+  Trash2
 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
