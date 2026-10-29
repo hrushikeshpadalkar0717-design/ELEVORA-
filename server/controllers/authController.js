@@ -8,11 +8,22 @@ import { getJwtSecret } from '../middleware/authMiddleware.js';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Default primary client URL for redirects (safely extracts first domain if comma-separated list is provided)
-const CLIENT_URL = process.env.CLIENT_URL
+const CLIENT_URL = (process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',')[0].trim()
-  : 'http://localhost:5173';
+  : 'http://localhost:5173'
+).replace(/\/+$/, '');
 const IS_PROD = process.env.NODE_ENV === 'production';
 const SAME_SITE = process.env.COOKIE_SAME_SITE || (IS_PROD ? 'none' : 'lax');
+
+// Safe origin extractor from referer header
+const getOriginFromReferer = (referer) => {
+  if (!referer) return null;
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return null;
+  }
+};
 
 // In-memory OAuth state store (per-process; works for single server instance)
 // Each entry: { createdAt: Date }
@@ -194,10 +205,11 @@ export const logoutUser = (req, res) => {
 // @route GET /api/auth/google  — redirects user to Google
 export const googleAuthRedirect = (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientOrigin =
+  const rawOrigin =
     req.query.client_url ||
-    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
+    getOriginFromReferer(req.headers.referer) ||
     CLIENT_URL;
+  const clientOrigin = (rawOrigin || '').replace(/\/+$/, '');
 
   if (!clientId) {
     return res.redirect(`${clientOrigin}/login?error=google_not_configured`);
@@ -337,10 +349,11 @@ export const googleCallback = async (req, res) => {
 // @route GET /api/auth/linkedin  — redirects user to LinkedIn
 export const linkedinAuthRedirect = (req, res) => {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
-  const clientOrigin =
+  const rawOrigin =
     req.query.client_url ||
-    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
+    getOriginFromReferer(req.headers.referer) ||
     CLIENT_URL;
+  const clientOrigin = (rawOrigin || '').replace(/\/+$/, '');
 
   if (!clientId) {
     return res.redirect(`${clientOrigin}/login?error=linkedin_not_configured`);
@@ -579,8 +592,8 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
     await user.save();
 
-    // Construct reset URL pointing to frontend
-    const clientUrl = req.headers.origin || CLIENT_URL;
+    // Construct reset URL pointing to frontend (safely normalized)
+    const clientUrl = (req.headers.origin || CLIENT_URL).replace(/\/+$/, '');
     const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
     const textMessage = `Hello ${user.fullName || 'User'},\n\nYou requested a password reset for your ELEVORA account.\n\nPlease click the link below or paste it into your browser to reset your password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n\nBest regards,\nThe ELEVORA Team`;

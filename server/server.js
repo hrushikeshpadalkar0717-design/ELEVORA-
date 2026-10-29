@@ -22,6 +22,40 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// Safely normalize origins (trims whitespace, strips trailing slashes, converts to lowercase)
+export const normalizeOrigin = (urlStr) => {
+  if (!urlStr || typeof urlStr !== 'string') return '';
+  return urlStr.trim().replace(/\/+$/, '').toLowerCase();
+};
+
+// Trusted origins allowed by default:
+// - Exact deployed production frontend: https://elevora-bay.vercel.app
+// - Local development origins
+const STATIC_ALLOWED_ORIGINS = [
+  'https://elevora-bay.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+].map(normalizeOrigin);
+
+// Resolves and normalizes all allowed frontend origins
+export const getCorsOrigins = () => {
+  const origins = new Set(STATIC_ALLOWED_ORIGINS);
+
+  if (process.env.CLIENT_URL) {
+    process.env.CLIENT_URL.split(',').forEach((u) => {
+      const normalized = normalizeOrigin(u);
+      if (normalized) {
+        origins.add(normalized);
+      }
+    });
+  }
+
+  return Array.from(origins);
+};
+
 // Security Headers & Content Security Policy compatible with Razorpay, OAuth & Google Fonts
 app.use(
   helmet({
@@ -44,17 +78,12 @@ app.use(
         ],
         connectSrc: [
           "'self'",
-          'http://localhost:5173',
-          'http://localhost:5174',
-          'http://localhost:3000',
-          'http://127.0.0.1:5173',
-          'http://127.0.0.1:5174',
           'https://api.razorpay.com',
           'https://lumberjack.razorpay.com',
           'https://accounts.google.com',
           'https://www.linkedin.com',
-          ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((u) => u.trim()) : []),
-        ].filter(Boolean),
+          ...getCorsOrigins(),
+        ],
         imgSrc: [
           "'self'",
           'data:',
@@ -73,46 +102,40 @@ app.use(
   })
 );
 
-// Dynamic allowed frontend origins (restricts strictly to CLIENT_URL in production)
-const getCorsOrigins = () => {
-  const isProd = process.env.NODE_ENV === 'production';
-  if (isProd) {
-    if (!process.env.CLIENT_URL) {
-      console.warn('⚠️ CLIENT_URL not set in production. Permitting same-origin only.');
-      return [];
+// CORS configuration — credentials required for cookies, supports preflight OPTIONS requests
+export const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin header (e.g. server-to-server, curl, mobile apps, health checks)
+    if (!origin) return callback(null, true);
+
+    const normalizedReqOrigin = normalizeOrigin(origin);
+    const allowed = getCorsOrigins();
+
+    if (allowed.includes(normalizedReqOrigin)) {
+      // Pass true so cors reflects the exact requesting origin in Access-Control-Allow-Origin
+      return callback(null, true);
     }
-    return process.env.CLIENT_URL.split(',').map((u) => u.trim()).filter(Boolean);
-  }
-  // Development origins
-  const devOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-  ];
-  if (process.env.CLIENT_URL) {
-    process.env.CLIENT_URL.split(',').forEach((u) => {
-      const clean = u.trim();
-      if (clean && !devOrigins.includes(clean)) devOrigins.push(clean);
-    });
-  }
-  return devOrigins;
+
+    console.warn(`⚠️ [CORS] Blocked request from unauthorized origin: ${origin} (Normalized: ${normalizedReqOrigin})`);
+    return callback(null, false);
+  },
+  credentials: true, // required for HttpOnly cookies and authorization headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+  ],
+  exposedHeaders: ['Set-Cookie'],
+  optionsSuccessStatus: 204, // 204 No Content for preflight OPTIONS responses
+  maxAge: 86400, // Preflight caching for 24 hours to reduce OPTIONS roundtrips
 };
 
-// CORS — credentials required for cookies
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin header (e.g. server-to-server, curl, mobile apps)
-      if (!origin) return callback(null, true);
-      const allowedOrigins = getCorsOrigins();
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true, // required for cookies
-  })
-);
+app.use(cors(corsOptions));
 
 app.use(
   express.json({
@@ -188,7 +211,8 @@ function validateEnv() {
   const isLive = (process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_live');
   console.log(`  • Razorpay Gateway:             ${razorpayConfigured ? `✅ CONFIGURED (${isLive ? 'LIVE MODE 💳' : 'TEST MODE 🧪'})` : '⚠️ NOT CONFIGURED (Add RAZORPAY_KEY_ID / SECRET in .env)'}`);
 
-  console.log(`  • Client Origin:                ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
+  console.log(`  • Client Origin Configured:     ${process.env.CLIENT_URL || 'Not specified (using defaults)'}`);
+  console.log(`  • Allowed CORS Origins:         ${getCorsOrigins().join(', ')}`);
   console.log('──────────────────────────────────────────────────────');
 }
 
@@ -236,7 +260,17 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Automatically start server only when executed directly via CLI (e.g. `node server.js` / `npm start`)
+// Prevents port binding and DB connection churn when imported by automated tests or serverless adapters
+export const isMainModule = Boolean(
+  import.meta.main ||
+    (process.argv[1] &&
+      path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase())
+);
+
+if (isMainModule) {
+  startServer();
+}
 
 export { app, startServer };
 export default app;
