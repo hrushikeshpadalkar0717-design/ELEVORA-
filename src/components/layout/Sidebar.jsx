@@ -10,10 +10,15 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
+  Crown,
   X
 } from 'lucide-react';
+import { useResume } from '../../context/ResumeContext';
+
 export const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { userPlan, profile } = useResume();
+  const currentPlan = (userPlan || profile?.plan || 'free').toLowerCase();
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -49,7 +54,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-lg text-white tracking-tight">ELEVORA</span>
-                  <span className="text-[10px] font-semibold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/30">PRO</span>
+                  {currentPlan === 'ultra' ? (
+                    <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-wider">ULTRA</span>
+                  ) : currentPlan === 'pro' ? (
+                    <span className="text-[10px] font-bold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/30 uppercase tracking-wider">PRO</span>
+                  ) : (
+                    <span className="text-[10px] font-semibold bg-slate-700/60 text-slate-300 px-1.5 py-0.5 rounded-full border border-slate-600/50 uppercase tracking-wider">FREE</span>
+                  )}
                 </div>
                 <span className="text-[11px] text-slate-400 font-normal">Build Your Future</span>
               </div>
@@ -94,24 +105,68 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Bottom Banner & Help */}
         <div className="p-4 space-y-4">
-          {/* Upgrade to Pro Card */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-800/90 border border-slate-700/60 text-left relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex items-center gap-2 text-blue-400 mb-1.5">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Upgrade to Pro</span>
+          {/* Dynamic Plan Card */}
+          {currentPlan === 'ultra' ? (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-800/90 border border-amber-500/40 text-left relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center gap-1.5 text-amber-400 mb-1.5">
+                <Crown className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">Ultra Plan Active</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
+                All templates, unlimited resumes & priority AI active.
+              </p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors"
+              >
+                <span>View Plan</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
-              Get access to premium templates, advanced AI suggestions and more.
-            </p>
-            <button
-              onClick={() => navigate('/pricing')}
-              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-            >
-              <span>Go Pro</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          ) : currentPlan === 'pro' ? (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-800/90 border border-blue-900/60 text-left relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-blue-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Pro Active</span>
+                </div>
+                <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">10 Resumes</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                Need unlimited resumes? Upgrade to Ultra anytime.
+              </p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+              >
+                <span>Go Ultra (₹500)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-800/90 border border-slate-700/60 text-left relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Free Mode</span>
+                </div>
+                <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-bold">1 Resume</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                Get up to 10 resumes, all 10+ premium templates and full ATS insights.
+              </p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+              >
+                <span>Upgrade to Pro (₹200)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Need Help Link */}
           <a

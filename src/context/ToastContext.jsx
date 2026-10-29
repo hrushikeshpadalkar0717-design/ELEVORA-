@@ -1,14 +1,33 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
+  const lastToastRef = useRef({ message: '', time: 0 });
 
   const showToast = useCallback((message, type = 'success', duration = 3500) => {
+    if (!message) return;
+
+    // Prevent duplicate popups within 2 seconds
+    const now = Date.now();
+    if (
+      lastToastRef.current.message === message &&
+      now - lastToastRef.current.time < 2000
+    ) {
+      return;
+    }
+    lastToastRef.current = { message, time: now };
+
     const id = Date.now() + Math.random().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => {
+      // Also prevent same message currently already visible
+      if (prev.some((t) => t.message === message)) {
+        return prev;
+      }
+      return [...prev, { id, message, type }];
+    });
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

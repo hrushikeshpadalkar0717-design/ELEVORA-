@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
@@ -7,14 +7,20 @@ import { useToast } from '../../context/ToastContext';
 export const AuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithToken } = useResume();
+  const { loginWithToken, loginWithOAuthCode } = useResume();
   const { showToast } = useToast();
 
   const [status, setStatus] = useState('processing'); // 'processing' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
+    // Guard against multiple executions in StrictMode or re-renders
+    if (hasProcessedRef.current) return;
+    hasProcessedRef.current = true;
+
     const processOAuthCallback = async () => {
+      const code = searchParams.get('code');
       const token = searchParams.get('token');
       const provider = searchParams.get('provider') || 'Social';
       const error = searchParams.get('error');
@@ -32,21 +38,19 @@ export const AuthCallbackPage = () => {
 
         setErrorMessage(readableError);
         showToast(readableError, 'error');
-        setTimeout(() => navigate('/login'), 2500);
-        return;
-      }
-
-      if (!token) {
-        setStatus('error');
-        const msg = 'No authentication token received from identity provider.';
-        setErrorMessage(msg);
-        showToast(msg, 'error');
-        setTimeout(() => navigate('/login'), 2500);
+        setTimeout(() => navigate('/login'), 2000);
         return;
       }
 
       try {
-        const user = await loginWithToken(token);
+        let user;
+        if (code) {
+          // Exchange single-use, 60s authorization code for authenticated session
+          user = await loginWithOAuthCode(code);
+        } else {
+          // Fallback via HttpOnly cookie (or token if provided in legacy flows)
+          user = await loginWithToken(token);
+        }
         setStatus('success');
         const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
 
@@ -57,11 +61,11 @@ export const AuthCallbackPage = () => {
         const shouldCompleteProfile = needsOnboardingParam || isNewParam || missingContact;
 
         if (shouldCompleteProfile) {
-          showToast(`Welcome! Please complete your contact and domain details before entering your dashboard.`, 'info');
-          setTimeout(() => navigate('/complete-profile', { replace: true }), 800);
+          showToast(`Welcome! Please complete your contact and domain details.`, 'info');
+          setTimeout(() => navigate('/complete-profile', { replace: true }), 200);
         } else {
           showToast(`Welcome! Successfully logged in with ${providerName}.`, 'success');
-          setTimeout(() => navigate('/dashboard', { replace: true }), 800);
+          setTimeout(() => navigate('/dashboard', { replace: true }), 200);
         }
       } catch (err) {
         console.error('Callback error:', err);
@@ -69,12 +73,12 @@ export const AuthCallbackPage = () => {
         const msg = err.message || 'Failed to initialize session with ELEVORA backend.';
         setErrorMessage(msg);
         showToast(msg, 'error');
-        setTimeout(() => navigate('/login'), 2500);
+        setTimeout(() => navigate('/login'), 2000);
       }
     };
 
     processOAuthCallback();
-  }, [searchParams, loginWithToken, navigate, showToast]);
+  }, [searchParams, loginWithToken, loginWithOAuthCode, navigate, showToast]);
 
   return (
     <div className="min-h-screen bg-[#f5f8fd] flex flex-col justify-center items-center p-4">

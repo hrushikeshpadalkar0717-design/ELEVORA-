@@ -27,7 +27,7 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { login, signup, isAuthenticated } = useResume();
+  const { login, signup, isAuthenticated, isLoaded } = useResume();
   const { showToast } = useToast();
 
   const isSignUpDefault = initialMode === 'signup' || location.pathname.includes('signup');
@@ -59,12 +59,16 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
   const [forgotError, setForgotError] = useState('');
   const [forgotResult, setForgotResult] = useState(null);
 
-  // Redirect already authenticated users away from /login and /signup
+  // LinkedIn account switching modal state
+  const [isLinkedInSwitchModalOpen, setIsLinkedInSwitchModalOpen] = useState(false);
+
+  // Redirect already authenticated users away from /login and /signup once session is confirmed
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (isLoaded && isAuthenticated) {
+      const fromPath = location.state?.from?.pathname || '/dashboard';
+      navigate(fromPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isLoaded, isAuthenticated, navigate, location.state]);
 
   // Display OAuth error if redirected with query param
   useEffect(() => {
@@ -138,13 +142,13 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
     }
   };
 
-  const handleSocialAuth = (provider) => {
+  const handleSocialAuth = (provider, options = {}) => {
     try {
       setSocialLoading(provider);
       if (provider === 'Google') {
-        window.location.href = api.getGoogleAuthUrl(window.location.origin);
+        window.location.href = api.getGoogleAuthUrl(window.location.origin, options);
       } else if (provider === 'LinkedIn') {
-        window.location.href = api.getLinkedInAuthUrl(window.location.origin);
+        window.location.href = api.getLinkedInAuthUrl(window.location.origin, options);
       }
     } catch {
       setSocialLoading(null);
@@ -446,6 +450,17 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
             </button>
           </div>
 
+          {/* LinkedIn Account Switching Helper Link */}
+          <div className="mt-2 text-center">
+            <button
+              type="button"
+              onClick={() => setIsLinkedInSwitchModalOpen(true)}
+              className="text-[11px] text-slate-500 hover:text-blue-600 transition-colors inline-flex items-center gap-1 font-medium cursor-pointer"
+            >
+              <span>Need to switch or use another LinkedIn account?</span>
+            </button>
+          </div>
+
           {/* Toggle Login / Sign Up */}
           <div className="mt-6 text-center text-xs text-slate-500">
             {isSignUp ? (
@@ -609,6 +624,100 @@ export const AuthPage = ({ initialMode = 'signup' }) => {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* LinkedIn Account Switching Modal */}
+      <Modal
+        isOpen={isLinkedInSwitchModalOpen}
+        onClose={() => setIsLinkedInSwitchModalOpen(false)}
+        title="Switching LinkedIn Accounts"
+        subtitle="Manage Active Provider Session & Re-authentication"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4 text-left">
+          <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-slate-700 leading-relaxed space-y-1">
+              <p className="font-bold text-slate-900">How LinkedIn Sign-In Works:</p>
+              <p>
+                ELEVORA automatically sends fresh re-authentication parameters (<code className="bg-blue-100 px-1 py-0.5 rounded text-[10px] font-mono">prompt=login</code> &amp; <code className="bg-blue-100 px-1 py-0.5 rounded text-[10px] font-mono">max_age=0</code>) on every sign-in attempt.
+                However, LinkedIn maintains its own browser session cookies on <code className="bg-blue-100 px-1 py-0.5 rounded text-[10px] font-mono">linkedin.com</code> across tabs.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs text-slate-600">
+            <p className="font-bold text-slate-800">To authenticate with a different LinkedIn account:</p>
+
+            <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1.5">
+              <div className="font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] flex items-center justify-center font-bold shrink-0">1</span>
+                <span>Request Re-Authentication</span>
+              </div>
+              <p className="text-[11px] text-slate-500 pl-7 leading-relaxed">
+                Sends a fresh authorization request prompting for credentials. If LinkedIn does not hold an active single sign-on cookie, it will ask for your email and password.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1.5">
+              <div className="font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] flex items-center justify-center font-bold shrink-0">2</span>
+                <span>Sign Out of LinkedIn.com</span>
+              </div>
+              <p className="text-[11px] text-slate-500 pl-7 leading-relaxed">
+                If LinkedIn continues to automatically reuse your existing profile, you can open LinkedIn's sign-out page in a separate tab to terminate the provider session, then return to ELEVORA.
+              </p>
+              <div className="pl-7 pt-1">
+                <a
+                  href="https://www.linkedin.com/m/logout"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-bold hover:underline text-[11px]"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Sign Out of LinkedIn in New Tab ↗
+                </a>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1.5">
+              <div className="font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] flex items-center justify-center font-bold shrink-0">3</span>
+                <span>Use a Private / Incognito Window</span>
+              </div>
+              <p className="text-[11px] text-slate-500 pl-7 leading-relaxed">
+                Open ELEVORA in an Incognito or Private browsing window to sign in with any LinkedIn account cleanly without clearing or interfering with your primary browser session.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              size="md"
+              type="button"
+              onClick={() => setIsLinkedInSwitchModalOpen(false)}
+              className="text-xs flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              type="button"
+              onClick={() => {
+                setIsLinkedInSwitchModalOpen(false);
+                handleSocialAuth('LinkedIn', { prompt: 'login' });
+              }}
+              className="text-xs font-bold flex-1 flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76a1.64 1.64 0 1 0 0-3.28 1.64 1.64 0 0 0 0 3.28m1.39 9.74v-8.37H5.07v8.37h2.78z" />
+              </svg>
+              <span>Continue with LinkedIn</span>
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

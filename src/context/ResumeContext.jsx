@@ -21,7 +21,7 @@ const STORAGE_KEY = 'elevora_app_state_v1';
 export const ResumeProvider = ({ children }) => {
   // Load from localStorage or defaults
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
   const [careerGoal, setCareerGoal] = useState(initialCareerGoal);
   const [education, setEducation] = useState(initialEducation);
@@ -81,7 +81,6 @@ export const ResumeProvider = ({ children }) => {
           }
           if (parsed.activeTemplate) setActiveTemplate(parsed.activeTemplate);
           if (parsed.atsAnalysis) setAtsAnalysis(parsed.atsAnalysis);
-          if (parsed.isAuthenticated !== undefined) setIsAuthenticated(parsed.isAuthenticated);
         }
 
         // Check if user has an active backend session in MongoDB Atlas (via HttpOnly cookie or localStorage token)
@@ -102,6 +101,7 @@ export const ResumeProvider = ({ children }) => {
               portfolio: userData.portfolio || prev.portfolio,
               github: userData.github || prev.github,
               avatar: userData.avatar || prev.avatar,
+              plan: userData.plan || prev.plan || 'free',
             }));
             if (userData.careerGoal) {
               setCareerGoal((prev) => ({ ...prev, ...userData.careerGoal }));
@@ -110,6 +110,8 @@ export const ResumeProvider = ({ children }) => {
             // Also load saved resumes from MongoDB - strictly isolated to current authenticated user
             const dbResumes = await api.getResumes();
             setSavedResumes(Array.isArray(dbResumes) ? dbResumes : []);
+          } else {
+            setIsAuthenticated(false);
           }
         } catch {
           // If server says not authenticated, ensure local storage and state reflect logged out
@@ -186,6 +188,7 @@ export const ResumeProvider = ({ children }) => {
       field: norm.field || prev.field,
       subfield: norm.subfield || prev.subfield,
       avatar: serverUser?.avatar || prev.avatar,
+      plan: serverUser?.plan || 'free',
     }));
 
     if (serverUser?.careerGoal) {
@@ -243,6 +246,7 @@ export const ResumeProvider = ({ children }) => {
       portfolio: '',
       github: '',
       avatar: serverUser?.avatar || '',
+      plan: serverUser?.plan || 'free',
     });
 
     return serverUser;
@@ -261,6 +265,7 @@ export const ResumeProvider = ({ children }) => {
           avatar: serverUser.avatar || prev.avatar,
           field: norm.field || prev.field,
           subfield: norm.subfield || prev.subfield,
+          plan: serverUser.plan || prev.plan || 'free',
         }));
         if (serverUser.careerGoal) {
           setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
@@ -291,6 +296,7 @@ export const ResumeProvider = ({ children }) => {
           avatar: serverUser.avatar || prev.avatar,
           field: norm.field || prev.field,
           subfield: norm.subfield || prev.subfield,
+          plan: serverUser.plan || prev.plan || 'free',
         }));
         if (serverUser.careerGoal) {
           setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
@@ -330,6 +336,45 @@ export const ResumeProvider = ({ children }) => {
       portfolio: serverUser.portfolio || prev.portfolio,
       github: serverUser.github || prev.github,
       avatar: serverUser.avatar || prev.avatar,
+      plan: serverUser.plan || prev.plan || 'free',
+    }));
+
+    if (serverUser.careerGoal) {
+      setCareerGoal((prev) => ({ ...prev, ...serverUser.careerGoal }));
+    }
+
+    try {
+      const dbResumes = await api.getResumes();
+      setSavedResumes(Array.isArray(dbResumes) ? dbResumes : []);
+    } catch (e) {
+      console.warn('Resume sync notice:', e.message);
+      setSavedResumes([]);
+    }
+
+    return serverUser;
+  };
+
+  const loginWithOAuthCode = async (code) => {
+    const serverUser = await api.exchangeOAuthCode(code);
+    if (!serverUser || !serverUser.email) {
+      throw new Error('Failed to retrieve user profile');
+    }
+
+    setIsAuthenticated(true);
+    const norm = normalizeLegacyProfile(serverUser.field, serverUser.subfield);
+    setProfile((prev) => ({
+      ...prev,
+      fullName: serverUser.fullName || prev.fullName,
+      email: serverUser.email,
+      phone: serverUser.phone || prev.phone,
+      field: norm.field || prev.field,
+      subfield: norm.subfield || prev.subfield,
+      location: serverUser.location || prev.location,
+      linkedin: serverUser.linkedin || prev.linkedin,
+      portfolio: serverUser.portfolio || prev.portfolio,
+      github: serverUser.github || prev.github,
+      avatar: serverUser.avatar || prev.avatar,
+      plan: serverUser.plan || prev.plan || 'free',
     }));
 
     if (serverUser.careerGoal) {
@@ -709,13 +754,39 @@ export const ResumeProvider = ({ children }) => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
+  // Plan management helpers
+  const updateUserPlan = (newPlan) => {
+    setProfile((prev) => ({ ...prev, plan: newPlan }));
+  };
+
+  const refreshUserProfile = async () => {
+    try {
+      const freshUser = await api.getMe();
+      if (freshUser && freshUser.email) {
+        setProfile((prev) => ({
+          ...prev,
+          plan: freshUser.plan || prev.plan || 'free',
+        }));
+        return freshUser;
+      }
+    } catch (err) {
+      console.warn('Refresh user profile notice:', err.message);
+    }
+  };
+
   return (
     <ResumeContext.Provider
       value={{
         isAuthenticated,
+        isLoaded,
+        authLoading: !isLoaded,
+        userPlan: profile.plan || 'free',
+        updateUserPlan,
+        refreshUserProfile,
         login,
         signup,
         loginWithToken,
+        loginWithOAuthCode,
         googleLogin,
         linkedinLogin,
         uploadAndApplyResume,

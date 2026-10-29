@@ -1,7 +1,20 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'elevora_fallback_jwt_secret_key_2026';
+/**
+ * Returns the configured JWT secret. In production, refuses to operate
+ * if JWT_SECRET is unset, preventing forged session tokens.
+ */
+export const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable is missing in production.');
+    }
+    return 'elevora_dev_jwt_secret_strictly_local_do_not_use_in_prod';
+  }
+  return secret;
+};
 
 /**
  * Extracts a JWT from either:
@@ -29,7 +42,8 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret);
 
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {

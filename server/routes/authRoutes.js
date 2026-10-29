@@ -11,17 +11,20 @@ import {
   updateUserProfile,
   forgotPassword,
   resetPassword,
+  exchangeOAuthCode,
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
 
 // ── Local authentication ──────────────────────────────────────────────────────
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+router.post('/register', authLimiter, registerUser);
+router.post('/login', authLimiter, loginUser);
 router.post('/logout', logoutUser);
-router.post('/forgot-password', forgotPassword);
-router.put('/reset-password/:token', resetPassword);
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.put('/reset-password/:token', passwordResetLimiter, resetPassword);
+router.post('/oauth-exchange', exchangeOAuthCode);
 
 // ── Google OAuth (Authorization Code Flow) ────────────────────────────────────
 router.get('/google', googleAuthRedirect);             // 1. Redirect user to Google

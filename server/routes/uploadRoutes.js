@@ -1,6 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { parseResumeFile } from '../controllers/uploadController.js';
+import { protect } from '../middleware/authMiddleware.js';
+import { uploadLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
 
@@ -30,6 +32,7 @@ const upload = multer({
   },
 });
 
-router.post('/resume', upload.single('resume'), parseResumeFile);
+// Guard resume extraction with user authentication and rate limiting
+router.post('/resume', protect, uploadLimiter, upload.single('resume'), parseResumeFile);
 
 export default router;

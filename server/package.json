@@ -4,9 +4,13 @@
   "description": "Backend API and MongoDB Atlas integration for ELEVORA Resume Builder",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node test/phase2DbHealth.test.js && node test/phase5SecurityAuth.test.js && node test/pricingUpgradeNotice.test.js && node test/linkedinReauth.test.js"
   },
   "dependencies": {
     "axios": "^1.8.1",
@@ -16,11 +20,14 @@
     "crypto": "^1.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.9.0",
     "mongoose": "^8.12.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^10.1.6",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "razorpay": "^2.9.8"
   }
 }

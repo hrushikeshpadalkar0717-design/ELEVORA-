@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -14,7 +15,9 @@ import { useResume } from '../../context/ResumeContext';
 import { useToast } from '../../context/ToastContext';
 
 export const SettingsPage = () => {
-  const { profile, logout } = useResume();
+  const navigate = useNavigate();
+  const { profile, logout, userPlan } = useResume();
+  const currentPlan = (userPlan || profile?.plan || 'free').toLowerCase();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('account');
@@ -80,17 +83,46 @@ export const SettingsPage = () => {
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Account Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Registered Email" value={profile.email} disabled />
-              <Input label="Account Tier" value="ELEVORA Pro (Activated)" disabled />
+              <Input label="Account Tier" value={`ELEVORA ${currentPlan.toUpperCase()} (${currentPlan === 'free' ? 'Standard' : 'Active'})`} disabled />
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-100 flex items-center justify-between">
+            <div className={`p-4 rounded-xl border flex items-center justify-between ${
+              currentPlan === 'ultra'
+                ? 'bg-gradient-to-r from-amber-50 to-orange-50/60 border-amber-200'
+                : currentPlan === 'pro'
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 border-blue-100'
+                : 'bg-gradient-to-r from-slate-50 to-slate-100/60 border-slate-200'
+            }`}>
               <div>
-                <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">ELEVORA Pro Plan</span>
-                <p className="text-xs text-slate-600 mt-0.5">Unlimited PDF/DOCX exports, ATS scans & AI enhancement</p>
+                <span className={`text-xs font-bold uppercase tracking-wider ${
+                  currentPlan === 'ultra' ? 'text-amber-800' : currentPlan === 'pro' ? 'text-blue-800' : 'text-slate-700'
+                }`}>
+                  ELEVORA {currentPlan.toUpperCase()} Plan
+                </span>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {currentPlan === 'ultra'
+                    ? 'Unlimited resumes, all templates, dedicated support & priority ATS'
+                    : currentPlan === 'pro'
+                    ? 'Up to 10 resumes, all 10+ premium templates & full ATS insights'
+                    : '1 resume, basic ATS scanning, and essential templates'}
+                </p>
               </div>
-              <span className="text-xs font-bold bg-blue-600 text-white px-3 py-1 rounded-lg shadow-sm">
-                Active
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold text-white px-3 py-1 rounded-lg shadow-sm ${
+                  currentPlan === 'ultra' ? 'bg-amber-600' : currentPlan === 'pro' ? 'bg-blue-600' : 'bg-slate-600'
+                }`}>
+                  Active
+                </span>
+                {currentPlan !== 'ultra' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/pricing')}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 underline ml-2"
+                  >
+                    Upgrade
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100">

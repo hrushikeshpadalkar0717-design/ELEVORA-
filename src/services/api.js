@@ -99,12 +99,32 @@ export const api = {
   },
 
   // OAuth: URL Generators for Authorization Code Flow
-  getGoogleAuthUrl(clientOrigin = window.location.origin) {
-    return `${API_BASE_URL}/auth/google?client_url=${encodeURIComponent(clientOrigin)}`;
+  getGoogleAuthUrl(clientOrigin = window.location.origin, options = {}) {
+    const params = new URLSearchParams({ client_url: clientOrigin });
+    if (options.prompt) params.append('prompt', options.prompt);
+    return `${API_BASE_URL}/auth/google?${params.toString()}`;
   },
 
-  getLinkedInAuthUrl(clientOrigin = window.location.origin) {
-    return `${API_BASE_URL}/auth/linkedin?client_url=${encodeURIComponent(clientOrigin)}`;
+  getLinkedInAuthUrl(clientOrigin = window.location.origin, options = {}) {
+    const params = new URLSearchParams({ client_url: clientOrigin });
+    if (options.prompt) params.append('prompt', options.prompt);
+    return `${API_BASE_URL}/auth/linkedin?${params.toString()}`;
+  },
+
+  // OAuth: Exchange one-time authorization code for session
+  async exchangeOAuthCode(code) {
+    const res = await fetch(`${API_BASE_URL}/auth/oauth-exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'OAuth verification failed');
+    if (data.token) {
+      localStorage.setItem('elevora_auth_token', data.token);
+    }
+    return data;
   },
 
   // Auth: Get Current Profile
@@ -251,6 +271,53 @@ export const api = {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Resume upload failed');
+    return data;
+  },
+
+  // ─── Razorpay Payment Integration ─────────────────────────────────────────
+
+  // Get Razorpay configuration (Public Key & Server Plans)
+  async getPaymentConfig() {
+    const res = await fetch(`${API_BASE_URL}/payments/config`, {
+      credentials: 'include',
+    });
+    return await res.json();
+  },
+
+  // Create Razorpay payment order for selected plan
+  async createPaymentOrder(planId) {
+    const res = await fetch(`${API_BASE_URL}/payments/create-order`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ planId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to initialize payment order');
+    return data;
+  },
+
+  // Verify Razorpay payment signature on backend
+  async verifyPayment(verificationData) {
+    const res = await fetch(`${API_BASE_URL}/payments/verify`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(verificationData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Payment signature verification failed');
+    return data;
+  },
+
+  // Get current user plan and payment history
+  async getMyPlanStatus() {
+    const res = await fetch(`${API_BASE_URL}/payments/my-status`, {
+      headers: getAuthHeaders(),
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch plan status');
     return data;
   },
 };

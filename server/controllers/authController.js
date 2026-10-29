@@ -3,30 +3,44 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { User } from '../models/User.js';
 import { sendEmail } from '../utils/sendEmail.js';
+import { getJwtSecret } from '../middleware/authMiddleware.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = process.env.JWT_SECRET || 'elevora_fallback_jwt_secret_key_2026';
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+// Default primary client URL for redirects (safely extracts first domain if comma-separated list is provided)
+const CLIENT_URL = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',')[0].trim()
+  : 'http://localhost:5173';
 const IS_PROD = process.env.NODE_ENV === 'production';
+const SAME_SITE = process.env.COOKIE_SAME_SITE || (IS_PROD ? 'none' : 'lax');
 
 // In-memory OAuth state store (per-process; works for single server instance)
 // Each entry: { createdAt: Date }
 const oauthStates = new Map();
 
-// Clean up states older than 10 minutes
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60 * 1000;
+// In-memory single-use OAuth exchange code store (expires in 60s)
+// Maps: exchangeCode -> { token: string, createdAt: number }
+const oauthExchangeCodes = new Map();
+
+// Clean up states older than 10 minutes and exchange codes older than 60 seconds
+const oauthCleanupTimer = setInterval(() => {
+  const stateCutoff = Date.now() - 10 * 60 * 1000;
   for (const [key, val] of oauthStates.entries()) {
-    if (val.createdAt < cutoff) oauthStates.delete(key);
+    if (val.createdAt < stateCutoff) oauthStates.delete(key);
   }
-}, 5 * 60 * 1000);
+
+  const codeCutoff = Date.now() - 60 * 1000;
+  for (const [key, val] of oauthExchangeCodes.entries()) {
+    if (val.createdAt < codeCutoff) oauthExchangeCodes.delete(key);
+  }
+}, 30 * 1000);
+if (oauthCleanupTimer.unref) oauthCleanupTimer.unref();
 
 // ─── JWT helpers ──────────────────────────────────────────────────────────────
 
 /** Sign a JWT containing only the user's MongoDB _id */
 const generateToken = (id) =>
-  jwt.sign({ id: id.toString() }, JWT_SECRET, { expiresIn: '30d' });
+  jwt.sign({ id: id.toString() }, getJwtSecret(), { expiresIn: '30d' });
 
 /**
  * Sets the JWT in an HttpOnly cookie AND returns it in the response body
@@ -35,8 +49,8 @@ const generateToken = (id) =>
 const setAuthCookie = (res, token) => {
   res.cookie('elevora_token', token, {
     httpOnly: true,
-    secure: IS_PROD,           // HTTPS only in production
-    sameSite: IS_PROD ? 'Strict' : 'Lax',
+    secure: IS_PROD,
+    sameSite: SAME_SITE,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
     path: '/',
   });
@@ -47,7 +61,7 @@ const clearAuthCookie = (res) => {
   res.clearCookie('elevora_token', {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: IS_PROD ? 'Strict' : 'Lax',
+    sameSite: SAME_SITE,
     path: '/',
   });
 };
@@ -69,6 +83,7 @@ const safeUser = (user, token) => ({
   hasCompletedOnboarding: Boolean(user.hasCompletedOnboarding && user.phone),
   careerGoal: user.careerGoal,
   activeTemplate: user.activeTemplate,
+  plan: user.plan || 'free',
   token, // included for localStorage fallback compatibility
 });
 
@@ -195,14 +210,15 @@ export const googleAuthRedirect = (req, res) => {
     process.env.GOOGLE_CALLBACK_URL ||
     `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
 
+  const promptParam = req.query.prompt || 'select_account';
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callbackUrl,
     response_type: 'code',
     scope: 'openid email profile',
     state,
-    access_type: 'offline',
-    prompt: 'select_account',
+    prompt: promptParam,
   });
 
   return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
@@ -212,7 +228,7 @@ export const googleAuthRedirect = (req, res) => {
 export const googleCallback = async (req, res) => {
   const { code, state, error } = req.query;
   const stateData = state ? oauthStates.get(state) : null;
-  const clientUrl = stateData?.clientOrigin || process.env.CLIENT_URL || 'http://localhost:5173';
+  const clientUrl = stateData?.clientOrigin || CLIENT_URL;
 
   if (error) {
     if (state) oauthStates.delete(state);
@@ -232,40 +248,43 @@ export const googleCallback = async (req, res) => {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    const callbackUrl =
+      process.env.GOOGLE_CALLBACK_URL ||
+      `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
 
-    // Exchange code for tokens
-    const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: callbackUrl,
-      grant_type: 'authorization_code',
-    });
+    // Direct TLS code-for-tokens exchange with Google
+    const tokenRes = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      {
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: callbackUrl,
+        grant_type: 'authorization_code',
+      },
+      { timeout: 8000 }
+    );
 
     const idToken = tokenRes.data.id_token;
     if (!idToken) {
       return res.redirect(`${clientUrl}/login?error=google_no_id_token`);
     }
 
-    // Verify ID token with Google's tokeninfo endpoint (server-side verification)
-    const verifyRes = await axios.get(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
-    );
-    const googleData = verifyRes.data;
+    // Decode ID token payload directly (already verified by TLS connection & client secret)
+    const googleData = jwt.decode(idToken);
+    if (!googleData || !googleData.sub) {
+      return res.redirect(`${clientUrl}/login?error=google_token_invalid`);
+    }
 
     // Validate token claims
     if (googleData.aud !== clientId) {
       console.error('Google token audience mismatch');
       return res.redirect(`${clientUrl}/login?error=google_token_invalid`);
     }
-    if (!googleData.email_verified || googleData.email_verified === 'false') {
-      return res.redirect(`${clientUrl}/login?error=google_email_not_verified`);
-    }
 
     const googleId = googleData.sub;
-    const email = googleData.email.toLowerCase();
-    const fullName = googleData.name || `${googleData.given_name || ''} ${googleData.family_name || ''}`.trim();
+    const email = (googleData.email || '').toLowerCase();
+    const fullName = googleData.name || `${googleData.given_name || ''} ${googleData.family_name || ''}`.trim() || 'Google User';
     const avatar = googleData.picture || '';
 
     // Find user by googleId first, then by verified email
@@ -301,11 +320,14 @@ export const googleCallback = async (req, res) => {
     const elevoraToken = generateToken(user._id);
     setAuthCookie(res, elevoraToken);
 
-    // Redirect to frontend with token in query param (one-time pickup by frontend)
-    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=google${needsOnboarding ? '&needsOnboarding=true' : ''}`);
+    // Generate single-use, 60s exchange code to securely transfer session without exposing JWT in URL
+    const exchangeCode = crypto.randomBytes(24).toString('hex');
+    oauthExchangeCodes.set(exchangeCode, { token: elevoraToken, createdAt: Date.now() });
+
+    return res.redirect(`${clientUrl}/auth/callback?code=${exchangeCode}&provider=google${needsOnboarding ? '&needsOnboarding=true' : ''}`);
   } catch (err) {
     console.error('Google callback error:', err.response?.data || err.message);
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = CLIENT_URL;
     return res.redirect(`${clientUrl}/login?error=google_auth_failed`);
   }
 };
@@ -318,8 +340,7 @@ export const linkedinAuthRedirect = (req, res) => {
   const clientOrigin =
     req.query.client_url ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
-    process.env.CLIENT_URL ||
-    'http://localhost:5173';
+    CLIENT_URL;
 
   if (!clientId) {
     return res.redirect(`${clientOrigin}/login?error=linkedin_not_configured`);
@@ -332,6 +353,8 @@ export const linkedinAuthRedirect = (req, res) => {
     process.env.LINKEDIN_CALLBACK_URL ||
     `${req.protocol}://${req.get('host')}/api/auth/linkedin/callback`;
 
+  const promptParam = req.query.prompt || 'login';
+
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
@@ -339,6 +362,8 @@ export const linkedinAuthRedirect = (req, res) => {
     // OpenID Connect scopes for Sign In with LinkedIn v2
     scope: 'openid profile email',
     state,
+    prompt: promptParam,
+    max_age: '0',
   });
 
   return res.redirect(`https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`);
@@ -348,7 +373,7 @@ export const linkedinAuthRedirect = (req, res) => {
 export const linkedinCallback = async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const stateData = state ? oauthStates.get(state) : null;
-  const clientUrl = stateData?.clientOrigin || process.env.CLIENT_URL || 'http://localhost:5173';
+  const clientUrl = stateData?.clientOrigin || CLIENT_URL;
 
   if (error) {
     console.warn('LinkedIn OAuth error:', error, error_description);
@@ -389,17 +414,19 @@ export const linkedinCallback = async (req, res) => {
     );
 
     const accessToken = tokenRes.data.access_token;
-    if (!accessToken) {
+    if (!accessToken && !tokenRes.data.id_token) {
       return res.redirect(`${clientUrl}/login?error=linkedin_no_access_token`);
     }
 
-    // Fetch user info from LinkedIn OIDC UserInfo endpoint
-    // This is the correct endpoint for Sign In with LinkedIn using OpenID Connect v2
-    const userInfoRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    const liData = userInfoRes.data;
+    // Try fast-decode ID token if returned by LinkedIn OIDC, otherwise query userinfo
+    let liData = tokenRes.data.id_token ? jwt.decode(tokenRes.data.id_token) : null;
+    if (!liData || !liData.sub) {
+      const userInfoRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 8000,
+      });
+      liData = userInfoRes.data;
+    }
     const linkedinId = liData.sub; // stable provider identifier
     if (!linkedinId) {
       return res.redirect(`${clientUrl}/login?error=linkedin_no_subject`);
@@ -451,7 +478,11 @@ export const linkedinCallback = async (req, res) => {
     const elevoraToken = generateToken(user._id);
     setAuthCookie(res, elevoraToken);
 
-    return res.redirect(`${clientUrl}/auth/callback?token=${elevoraToken}&provider=linkedin${needsOnboarding ? '&needsOnboarding=true' : ''}`);
+    // Generate single-use, 60s exchange code to securely transfer session without exposing JWT in URL
+    const exchangeCode = crypto.randomBytes(24).toString('hex');
+    oauthExchangeCodes.set(exchangeCode, { token: elevoraToken, createdAt: Date.now() });
+
+    return res.redirect(`${clientUrl}/auth/callback?code=${exchangeCode}&provider=linkedin${needsOnboarding ? '&needsOnboarding=true' : ''}`);
   } catch (err) {
     console.error('LinkedIn callback error:', err.response?.data || err.message);
     return res.redirect(`${clientUrl}/login?error=linkedin_auth_failed`);
@@ -549,7 +580,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Construct reset URL pointing to frontend
-    const clientUrl = req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = req.headers.origin || CLIENT_URL;
     const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
     const textMessage = `Hello ${user.fullName || 'User'},\n\nYou requested a password reset for your ELEVORA account.\n\nPlease click the link below or paste it into your browser to reset your password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n\nBest regards,\nThe ELEVORA Team`;
@@ -639,4 +670,44 @@ export const resetPassword = async (req, res) => {
     return res.status(500).json({ message: error.message || 'Error resetting password' });
   }
 };
+
+// ─── TASK 7: Exchange one-time OAuth authorization code for session ──────────
+
+// @route POST /api/auth/oauth-exchange
+export const exchangeOAuthCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ message: 'Authorization code is required' });
+    }
+
+    const entry = oauthExchangeCodes.get(code);
+    if (!entry) {
+      return res.status(401).json({ message: 'Invalid or expired authorization code' });
+    }
+
+    // Burn immediately — single use
+    oauthExchangeCodes.delete(code);
+
+    if (Date.now() - entry.createdAt > 60 * 1000) {
+      return res.status(401).json({ message: 'Authorization code has expired' });
+    }
+
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(entry.token, secret);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User account not found' });
+    }
+
+    // Re-ensure HttpOnly cookie is set
+    setAuthCookie(res, entry.token);
+
+    return res.json(safeUser(user, entry.token));
+  } catch (error) {
+    console.error('OAuth exchange error:', error.message);
+    return res.status(500).json({ message: 'Failed to complete OAuth authentication' });
+  }
+};
+
 

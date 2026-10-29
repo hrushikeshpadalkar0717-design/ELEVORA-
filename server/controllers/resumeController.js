@@ -34,9 +34,32 @@ export const getResumeById = async (req, res) => {
 };
 
 // @desc    Create a new resume
-// @route   POST /api/resumes
 export const createResume = async (req, res) => {
   try {
+    // Enforce plan restrictions defined in ELEVORA pricing tiers
+    const userPlan = req.user.plan || 'free';
+    const existingCount = await Resume.countDocuments({ user: req.user._id });
+
+    if (userPlan === 'free' && existingCount >= 1) {
+      return res.status(403).json({
+        message: 'Free plan limit reached (1 resume maximum). Please upgrade to Pro or Ultra to create additional resumes.',
+        code: 'PLAN_LIMIT_EXCEEDED',
+        plan: userPlan,
+        limit: 1,
+        currentCount: existingCount,
+      });
+    }
+
+    if (userPlan === 'pro' && existingCount >= 10) {
+      return res.status(403).json({
+        message: 'Pro plan limit reached (10 resumes maximum). Please upgrade to Ultra for unlimited resumes.',
+        code: 'PLAN_LIMIT_EXCEEDED',
+        plan: userPlan,
+        limit: 10,
+        currentCount: existingCount,
+      });
+    }
+
     const rawData = { ...req.body };
     // Remove client-only or non-ObjectId _id/id to avoid CastError
     if (rawData._id && !rawData._id.toString().match(/^[0-9a-fA-F]{24}$/)) {

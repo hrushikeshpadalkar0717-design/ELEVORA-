@@ -78,6 +78,12 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: 'modern',
     },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'ultra'],
+      default: 'free',
+      index: true,
+    },
     hasCompletedOnboarding: {
       type: Boolean,
       default: false,

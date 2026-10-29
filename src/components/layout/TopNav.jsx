@@ -128,18 +128,25 @@ export const TopNav = ({ onToggleSidebar }) => {
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-semibold flex items-center justify-center text-xs shadow-sm overflow-hidden border border-blue-200">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-semibold flex items-center justify-center text-xs shadow-sm overflow-hidden border border-blue-200 shrink-0">
               {profile.avatar ? (
                 <img
                   src={profile.avatar}
-                  alt={profile.fullName}
+                  alt={profile.fullName || 'User'}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
               ) : (
-                profile.fullName?.slice(0, 2).toUpperCase() || 'JD'
+                profile.fullName ? (
+                  profile.fullName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()
+                ) : 'JD'
               )}
             </div>
             <span className="text-sm font-semibold text-slate-700 hidden sm:inline">
