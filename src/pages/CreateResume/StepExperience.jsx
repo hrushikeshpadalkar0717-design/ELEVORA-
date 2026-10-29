@@ -242,14 +242,14 @@ export const StepExperience = () => {
               label="Company Name"
               value={form.company}
               onChange={(e) => setForm({ ...form, company: e.target.value })}
-              placeholder="e.g. Tata Technologies"
+              placeholder="e.g. Google, Infosys, or Tech Corp"
               required
             />
             <Input
               label="Role / Position"
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              placeholder="e.g. Mechanical Design Intern"
+              placeholder="e.g. Software Engineer Intern"
               required
             />
           </div>
@@ -291,7 +291,7 @@ export const StepExperience = () => {
             label="Key Responsibilities (one bullet per line)"
             value={form.responsibilities}
             onChange={(e) => setForm({ ...form, responsibilities: e.target.value })}
-            placeholder="Assisted in designing mechanical components using SolidWorks.&#10;Worked on CAD modelling and 3D simulations.&#10;Collaborated with senior engineers on project documentation."
+            placeholder="Collaborated with team to develop core features and components.&#10;Streamlined workflows resulting in measurable performance gains.&#10;Documented technical specifications and conducted code reviews."
             rows={4}
           />
 

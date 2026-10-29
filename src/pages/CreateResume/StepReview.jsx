@@ -129,7 +129,7 @@ export const StepReview = () => {
             <div className="space-y-1">
               <h3 className="text-base font-extrabold text-slate-900">{profile.fullName || 'John Doe'}</h3>
               <p className="text-xs font-semibold text-blue-600">
-                {careerGoal.targetRoles?.[0] || 'Mechanical Design Engineer'} • {profile.field}
+                {careerGoal.targetRoles?.[0] || profile.subfield || profile.field || 'Software Developer'} • {profile.field}
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 pt-1">
                 <span className="flex items-center gap-1">

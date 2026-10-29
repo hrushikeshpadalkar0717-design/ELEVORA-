@@ -245,14 +245,14 @@ export const StepCertifications = () => {
         isOpen={certModalOpen}
         onClose={() => setCertModalOpen(false)}
         title={editingCert ? 'Edit Certification' : 'Add Certification'}
-        subtitle="e.g. SolidWorks Professional, AWS Certified, Six Sigma"
+        subtitle="e.g. AWS Certified, Google Cloud, PMP, Six Sigma"
       >
         <form onSubmit={handleSaveCert} className="space-y-4 text-left">
           <Input
             label="Certification Name"
             value={certForm.name}
             onChange={(e) => setCertForm({ ...certForm, name: e.target.value })}
-            placeholder="e.g. SolidWorks Professional (CSWP)"
+            placeholder="e.g. AWS Certified Cloud Practitioner"
             required
             autoFocus
           />
@@ -260,7 +260,7 @@ export const StepCertifications = () => {
             label="Issuing Organization"
             value={certForm.issuer}
             onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })}
-            placeholder="e.g. Dassault Systèmes"
+            placeholder="e.g. Amazon Web Services"
             required
           />
           <div className="grid grid-cols-2 gap-3">

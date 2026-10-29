@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  ELEVORA – AI Simulation Service
-//  All functions are field + subfield aware.
+//  All functions are field + subfield aware with robust taxonomy mapping.
 // ─────────────────────────────────────────────────────────────
 
 const delay = (ms = 900) => new Promise((r) => setTimeout(r, ms));
@@ -12,549 +12,570 @@ const genericVerbs = [
   'Delivered', 'Championed', 'Designed', 'Developed', 'Established'
 ];
 
+// Universal neutral fallback (never uses mechanical CAD or domain-specific assumptions)
+const UNIVERSAL_DEFAULT_CONFIG = {
+  verbs: genericVerbs,
+  summaries: {
+    fresher: (role, skills) => `Goal-oriented and motivated ${role} graduate with foundational expertise in ${skills}. Demonstrated ability to apply core principles to practical challenges, with strong problem-solving skills and a commitment to professional excellence.`,
+    intern: (role, skills) => `Dedicated ${role} intern with hands-on project experience in ${skills}. Eager to leverage analytical problem solving, collaborative teamwork, and professional rigor to deliver high-quality outcomes.`,
+    experienced: (role, skills) => `Results-driven ${role} with a proven track record in ${skills}. Experienced in cross-functional collaboration, operational efficiency, and delivering measurable results in dynamic environments.`,
+  },
+  defaultSkills: 'analytical problem solving, project management, cross-functional collaboration',
+  bulletPatterns: [
+    { match: ['lead', 'manage', 'coordinate'], out: 'Coordinated cross-functional teams to deliver project milestones on time, maintaining quality benchmarks and stakeholder alignment.' },
+    { match: ['optimize', 'improve', 'efficiency'], out: 'Streamlined operational processes and eliminated workflow bottlenecks, driving measurable improvements in productivity.' },
+    { match: ['report', 'document', 'present'], out: 'Prepared comprehensive technical documentation and executive presentations summarizing key metrics and strategic recommendations.' },
+  ],
+  atsKeywords: {
+    matched: ['Problem Solving', 'Project Management', 'Communication', 'Teamwork', 'Process Optimization'],
+    missing: ['Industry Standards', 'Measurable Metrics', 'Certifications'],
+  },
+  interviewQs: [
+    { q: (role) => `Describe a challenging project you contributed to as a ${role} and how you overcame obstacles.`, kp: ['Problem identification', 'Iterative solution design', 'Quantifiable outcome'], ans: 'I defined the core constraints, broke the problem into manageable phases, collaborated closely with stakeholders, and delivered the target outcome.' },
+  ],
+};
+
 // ── Domain configuration keyed by field → subfield ─────────────
 const DOMAIN_CONFIG = {
+
+  // ─────────────────────────────────────────────────────────────
+  //  ENGINEERING
+  // ─────────────────────────────────────────────────────────────
   'Engineering': {
-    'Mechanical Engineering': {
-      verbs: ['Engineered', 'Modelled', 'Fabricated', 'Optimized', 'Validated', 'Designed', 'Simulated'],
+    'CSE': {
+      verbs: ['Built', 'Architected', 'Developed', 'Engineered', 'Optimized', 'Deployed', 'Implemented'],
       summaries: {
-        fresher: (role, skills) => `Results-driven ${role} graduate with hands-on expertise in ${skills}. Proven track record in rapid prototyping, structural verification, and machine vision inspection. Adept at translating complex engineering requirements into robust, manufacturable designs while maintaining precision and standard compliance.`,
-        intern: (role, skills) => `Motivated ${role} professional with practical project experience in ${skills}. Eager to leverage technical rigor in 3D modeling, stress analysis, and cross-functional design collaboration to accelerate product development cycles.`,
-        experienced: (role, skills) => `Accomplished ${role} with extensive background in product design lifecycle, FEA simulation, and CAD modeling using ${skills}. Demonstrated success in optimizing mechanical assemblies, reducing material costs by up to 18%, and collaborating with fabrication teams to ensure DFM/DFA delivery.`,
+        fresher: (role, skills) => `Enthusiastic and technically skilled ${role} graduate with strong foundations in ${skills}. Passionate about building responsive applications, writing clean maintainable code, and solving complex algorithmic challenges.`,
+        intern: (role, skills) => `Driven ${role} intern with hands-on project experience in ${skills}, RESTful API development, and modern software development workflows. Eager to contribute to agile teams and scale user-centric systems.`,
+        experienced: (role, skills) => `Accomplished ${role} with deep expertise in ${skills}. Proven track record in designing scalable systems, optimizing application performance, and delivering robust software solutions in fast-paced production environments.`,
       },
-      defaultSkills: 'SolidWorks, AutoCAD, MATLAB',
+      defaultSkills: 'JavaScript, React, Node.js, Python, SQL',
       bulletPatterns: [
-        { match: ['cad', 'drawing', 'model'], out: 'Engineered parametric 3D CAD assemblies and precision manufacturing drawings per ASME Y14.5 GD&T standards, reducing design rework by 25%.' },
-        { match: ['solidworks'], out: 'Modelled high-precision mechanical components in SolidWorks, validating structural integrity with static stress FEA simulations.' },
-        { match: ['defect', 'inspect', 'test'], out: 'Spearheaded automated inspection protocols, boosting defect identification accuracy to 92% and accelerating QA throughput.' },
-        { match: ['team', 'collaborat'], out: 'Partnered cross-functionally with fabrication leads to align prototyping benchmarks and ensure strict DFM compliance.' },
+        { match: ['react', 'frontend', 'ui', 'web'], out: 'Built responsive single-page web applications with modern frontend frameworks, optimizing rendering performance and state management.' },
+        { match: ['api', 'backend', 'node', 'server', 'database', 'sql'], out: 'Architected scalable RESTful APIs with Node.js and SQL/NoSQL databases, achieving high availability and sub-100ms response times.' },
+        { match: ['ml', 'ai', 'data', 'python', 'model'], out: 'Developed predictive machine learning models and automated data processing pipelines in Python, driving measurable analytics insights.' },
+        { match: ['test', 'git', 'deploy', 'docker', 'ci'], out: 'Implemented automated testing suites and CI/CD pipelines, increasing code coverage to 85%+ and streamlining deployment cycles.' },
+      ],
+      atsKeywords: {
+        matched: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL', 'Git', 'REST APIs', 'Data Structures'],
+        missing: ['Docker', 'CI/CD Pipelines', 'System Design'],
+      },
+      interviewQs: [
+        { q: (role) => `As a ${role}, how do you approach designing scalable RESTful APIs?`, kp: ['Idempotency & HTTP status codes', 'Pagination & rate limiting', 'Caching with Redis'], ans: 'I adhere to REST conventions, enforce idempotent endpoints, implement cursor-based pagination and rate limiting, and cache hot data in Redis with appropriate TTL.' },
+      ],
+    },
+
+    'IT': {
+      verbs: ['Configured', 'Administered', 'Automated', 'Deployed', 'Monitored', 'Maintained', 'Secured'],
+      summaries: {
+        fresher: (role, skills) => `Proactive ${role} graduate with comprehensive knowledge of ${skills}. Skilled in infrastructure management, networking protocols, and system administration, with a strong focus on high-availability IT services.`,
+        intern: (role, skills) => `Motivated ${role} intern with hands-on exposure to ${skills}, cloud support, and automated system maintenance in enterprise environments.`,
+        experienced: (role, skills) => `Experienced ${role} with deep expertise in ${skills}. Track record of maintaining 99.9% system uptime, automating server provisioning, and fortifying enterprise infrastructure security.`,
+      },
+      defaultSkills: 'Cloud Computing, Linux, Networking, SQL, Docker',
+      bulletPatterns: [
+        { match: ['cloud', 'aws', 'azure'], out: 'Provisioned and managed cloud infrastructure in AWS/Azure, optimizing resource allocation and reducing operational overhead.' },
+        { match: ['linux', 'server', 'admin'], out: 'Administered Linux and Windows server environments, automating recurring maintenance tasks via Shell and PowerShell scripting.' },
+        { match: ['network', 'firewall', 'security'], out: 'Configured secure network topologies, VPNs, and firewall rules to protect organizational assets from unauthorized access.' },
+      ],
+      atsKeywords: {
+        matched: ['Linux Administration', 'Cloud Infrastructure', 'Network Security', 'SQL', 'Docker', 'Automation'],
+        missing: ['Terraform', 'Kubernetes', 'ITIL Framework'],
+      },
+      interviewQs: [
+        { q: (role) => `How would you troubleshoot high latency on a corporate server as a ${role}?`, kp: ['Resource utilization (CPU/Memory/I/O)', 'Network diagnostics (traceroute/ping)', 'Log inspection'], ans: 'I inspect top/htop for CPU and memory saturation, check disk I/O with iostat, test network latency with traceroute, and review syslog and application logs for recurring errors.' },
+      ],
+    },
+
+    'E&TC': {
+      verbs: ['Designed', 'Tested', 'Programmed', 'Integrated', 'Debugged', 'Simulated', 'Fabricated'],
+      summaries: {
+        fresher: (role, skills) => `Dedicated ${role} graduate with foundational expertise in ${skills}. Experienced in hardware-software co-design, PCB layout, and embedded firmware development for real-time systems.`,
+        intern: (role, skills) => `Electronics engineering intern with practical exposure to ${skills}, circuit testing, and sensor integration in laboratory and prototype environments.`,
+        experienced: (role, skills) => `Senior ${role} with extensive background in ${skills}, embedded product development, and telecommunication systems. Proven success in taking hardware concepts from schematic to production.`,
+      },
+      defaultSkills: 'Embedded C, Microcontrollers, VLSI, IoT, Circuit Design',
+      bulletPatterns: [
+        { match: ['embedded', 'firmware', 'c', 'microcontroller', 'arduino', 'stm32'], out: 'Developed real-time firmware for STM32 microcontrollers in Embedded C, achieving deterministic sensor acquisition.' },
+        { match: ['pcb', 'circuit', 'schematic'], out: 'Designed multi-layer PCB schematics and layouts, conducting signal integrity analysis and reducing board noise by 20%.' },
+        { match: ['iot', 'sensor', 'wireless'], out: 'Integrated wireless IoT telemetry modules over MQTT/BLE, reducing transmission power consumption by 30%.' },
+      ],
+      atsKeywords: {
+        matched: ['Embedded C', 'Microcontroller Programming', 'PCB Design', 'IoT', 'VLSI', 'Signal Processing'],
+        missing: ['RTOS', 'FPGA Architecture', 'EMC/EMI Compliance'],
+      },
+      interviewQs: [
+        { q: (role) => `How do you handle debounce issues in hardware interrupt buttons as a ${role}?`, kp: ['Hardware RC filtering', 'Software timer delay', 'State machine validation'], ans: 'I use a hardware RC low-pass filter or implement a software timer check that ignores subsequent transitions within a 20-50ms window.' },
+      ],
+    },
+
+    'Mechanical': {
+      verbs: ['Engineered', 'Modelled', 'Fabricated', 'Optimized', 'Simulated', 'Validated', 'Designed'],
+      summaries: {
+        fresher: (role, skills) => `Results-driven ${role} graduate with hands-on expertise in ${skills}. Proven ability in 3D CAD modeling, structural FEA analysis, and precision manufacturing documentation per ASME GD&T standards.`,
+        intern: (role, skills) => `Motivated ${role} intern with practical project experience in ${skills}, prototype fabrication, and stress simulation in engineering environments.`,
+        experienced: (role, skills) => `Accomplished ${role} with extensive background in mechanical design lifecycle, CAD/FEA simulation, and DFM/DFA delivery using ${skills}. Reduced assembly costs and shortened prototyping cycles.`,
+      },
+      defaultSkills: 'SolidWorks, AutoCAD, ANSYS, GD&T, MATLAB',
+      bulletPatterns: [
+        { match: ['cad', 'drawing', 'model', 'solidworks'], out: 'Engineered parametric 3D CAD assemblies and precision manufacturing drawings per ASME Y14.5 GD&T standards, reducing design rework by 25%.' },
+        { match: ['fea', 'ansys', 'stress', 'simulation'], out: 'Performed static stress and fatigue FEA simulations in ANSYS, validating factor of safety under peak operational load conditions.' },
+        { match: ['dfm', 'manufacturing', 'machining'], out: 'Collaborated with manufacturing and tooling teams to ensure DFM/DFA compliance, cutting component fabrication time by 15%.' },
       ],
       atsKeywords: {
         matched: ['SolidWorks', 'CAD Modelling', 'FEA Simulation', 'GD&T', 'Mechanical Design', 'AutoCAD', 'ANSYS'],
         missing: ['DFM/DFA', 'Tolerance Stack-up', 'Design of Experiments'],
       },
       interviewQs: [
-        { q: (role) => `How do you perform tolerance stack-up analysis when preparing an assembly for mass manufacturing as a ${role}?`, kp: ['Worst-case vs RSS', 'Thermal expansion', 'Cumulative dimensional drift'], ans: 'I establish a dimensional chain between critical assembly features. For tight safety fits I use 1D WC analysis; for high-volume products I use RSS assuming Gaussian variance.' },
+        { q: (role) => `How do you perform tolerance stack-up analysis when preparing an assembly as a ${role}?`, kp: ['Worst-case vs RSS', 'Thermal expansion', 'Cumulative dimensional drift'], ans: 'I establish a dimensional chain between critical assembly features. For tight safety fits I use 1D WC analysis; for high-volume products I use RSS assuming Gaussian variance.' },
       ],
     },
-    'Civil Engineering': {
-      verbs: ['Designed', 'Surveyed', 'Estimated', 'Planned', 'Coordinated', 'Executed', 'Analyzed'],
+
+    'Civil': {
+      verbs: ['Designed', 'Surveyed', 'Estimated', 'Supervised', 'Planned', 'Coordinated', 'Inspected'],
       summaries: {
-        fresher: (role, skills) => `Driven ${role} graduate with foundational expertise in ${skills}. Hands-on experience in site surveying, structural analysis, and AutoCAD drafting. Committed to delivering safe, code-compliant infrastructure projects.`,
-        intern: (role, skills) => `Emerging ${role} with internship experience in ${skills}, site supervision, and quantity estimation. Skilled at translating design drawings into actionable field instructions.`,
-        experienced: (role, skills) => `Senior ${role} with a strong track record in design, execution, and project management of infrastructure projects using ${skills}. Delivered multi-crore projects on time and within budget.`,
+        fresher: (role, skills) => `Driven ${role} graduate with foundational expertise in ${skills}. Hands-on experience in site surveying, structural analysis, and drafting code-compliant engineering layouts.`,
+        intern: (role, skills) => `Civil engineering intern with field exposure to ${skills}, quantity estimation, and quality assurance on active construction sites.`,
+        experienced: (role, skills) => `Senior ${role} with a strong track record in structural design, site execution, and project management of infrastructure projects using ${skills}.`,
       },
-      defaultSkills: 'AutoCAD, STAAD.Pro, Revit',
+      defaultSkills: 'AutoCAD, STAAD.Pro, Revit, Structural Analysis, Site Supervision',
       bulletPatterns: [
         { match: ['survey', 'layout'], out: 'Conducted precise topographic surveys and site layout using Total Station, reducing rework by 15%.' },
-        { match: ['design', 'structure', 'beam', 'column'], out: 'Designed RCC structural members per IS 456:2000, optimizing steel quantities by 12% without compromising load capacity.' },
-        { match: ['estimate', 'bom', 'quantity'], out: 'Prepared detailed BOQ and cost estimates for multi-crore construction projects, ensuring accuracy within 5% of final costs.' },
-        { match: ['team', 'site', 'coordinate'], out: 'Coordinated 20+ on-site workers and sub-contractors maintaining project schedule adherence above 95%.' },
+        { match: ['design', 'structure', 'beam', 'column'], out: 'Designed RCC structural members per IS codes, optimizing steel quantities by 12% without compromising load capacity.' },
+        { match: ['estimate', 'boq', 'quantity'], out: 'Prepared detailed BOQ and cost estimates for construction projects, maintaining accuracy within 5% of actual expenditure.' },
       ],
       atsKeywords: {
         matched: ['AutoCAD', 'STAAD.Pro', 'Structural Design', 'BOQ', 'Site Supervision', 'IS Codes'],
-        missing: ['Revit Structure', 'ETABS', 'RERA Compliance'],
+        missing: ['Revit Structure', 'ETABS', 'Project Scheduling'],
       },
       interviewQs: [
-        { q: () => 'How do you handle deviation from the construction drawing on site?', kp: ['RFI process', 'Consultation with design engineer', 'Field engineering'], ans: 'I raise an RFI immediately, document the deviation, and implement field changes only after written approval from the structural engineer.' },
+        { q: () => 'How do you handle deviation from the construction drawing on site?', kp: ['RFI process', 'Consultation with design engineer', 'Field documentation'], ans: 'I raise an RFI immediately, document the deviation with site photos, and implement changes only after written approval from the structural engineer.' },
       ],
     },
-    'Electrical Engineering': {
-      verbs: ['Designed', 'Tested', 'Commissioned', 'Configured', 'Analyzed', 'Integrated', 'Optimized'],
+
+    'Electrical': {
+      verbs: ['Designed', 'Tested', 'Commissioned', 'Configured', 'Analyzed', 'Integrated', 'Programmed'],
       summaries: {
-        fresher: (role, skills) => `Driven ${role} graduate with strong foundations in ${skills}. Completed projects spanning power system design, PCB layout, and control system simulation.`,
-        intern: (role, skills) => `Electrical engineering intern proficient in ${skills} with exposure to industrial automation, PLC programming, and panel wiring in live plant environments.`,
-        experienced: (role, skills) => `Accomplished ${role} with expertise in ${skills}, managing end-to-end electrical design for large-scale industrial and commercial projects. Delivered solutions reducing energy consumption by 20%.`,
+        fresher: (role, skills) => `Driven ${role} graduate with strong foundations in ${skills}. Hands-on experience in electrical schematic design, power system modeling, and industrial automation.`,
+        intern: (role, skills) => `Electrical engineering intern proficient in ${skills} with exposure to panel wiring, PLC troubleshooting, and control system testing in industrial settings.`,
+        experienced: (role, skills) => `Accomplished ${role} with deep expertise in ${skills}, managing end-to-end electrical design, protection coordination, and energy optimization for industrial systems.`,
       },
-      defaultSkills: 'AutoCAD Electrical, MATLAB, PLC, ETAP',
+      defaultSkills: 'PLC Programming, MATLAB, Power Systems, AutoCAD Electrical, ETAP',
       bulletPatterns: [
-        { match: ['plc', 'scada', 'automation'], out: 'Programmed Siemens S7-1500 PLC in Ladder Logic and SCL for automated conveyor system, reducing manual intervention by 70%.' },
-        { match: ['panel', 'wiring', 'circuit'], out: 'Designed and commissioned 11kV switchgear panels per IEC 61439 standards, ensuring zero NCRs during third-party inspection.' },
-        { match: ['power', 'load', 'analysis'], out: 'Performed load flow and short-circuit analysis using ETAP for a 33kV substation upgrade, ensuring protection coordination compliance.' },
+        { match: ['plc', 'scada', 'automation'], out: 'Programmed industrial PLCs in Ladder Logic and SCL for automated conveyor and packaging systems, cutting manual downtime by 40%.' },
+        { match: ['panel', 'wiring', 'circuit', 'schematic'], out: 'Designed single-line diagrams (SLD) and panel layouts in AutoCAD Electrical complying with IEC standards.' },
+        { match: ['power', 'load', 'etap'], out: 'Conducted load flow and short-circuit studies in ETAP, optimizing transformer loading and protection relay coordination.' },
       ],
       atsKeywords: {
         matched: ['AutoCAD Electrical', 'PLC Programming', 'ETAP', 'Power Systems', 'Control Systems', 'Panel Design'],
-        missing: ['Renewable Energy Systems', 'Power Electronics', 'SCADA Integration'],
+        missing: ['SCADA Integration', 'Power Electronics', 'Renewable Energy Systems'],
       },
       interviewQs: [
-        { q: () => 'Explain how you would perform a protection coordination study for an industrial plant.', kp: ['Fault current calculation', 'Time-current curves', 'Selectivity and backup'], ans: 'I calculate maximum and minimum fault currents at each bus, plot TCC for all protective devices in ETAP, and verify selectivity such that the device closest to the fault operates first while upstream devices provide backup.' },
+        { q: () => 'Explain how you coordinate protective relays in a power distribution network.', kp: ['Fault calculation', 'Time-current curves', 'Primary vs backup selectivity'], ans: 'I calculate minimum and maximum fault currents at each bus, plot time-current characteristics in ETAP, and ensure downstream breakers clear faults before upstream relays trip.' },
       ],
     },
-    'Computer Engineering': {
-      verbs: ['Built', 'Architected', 'Implemented', 'Optimized', 'Integrated', 'Deployed', 'Engineered'],
+
+    '_default': {
+      verbs: ['Engineered', 'Optimized', 'Delivered', 'Implemented', 'Analyzed', 'Designed', 'Coordinated'],
       summaries: {
-        fresher: (role, skills) => `Technically strong ${role} with skills in ${skills}. Developed embedded systems projects and contributed to full-stack and hardware-software integration work.`,
-        intern: (role, skills) => `Computer engineering intern with exposure to ${skills}, firmware development, and hardware debugging in a professional lab environment.`,
-        experienced: (role, skills) => `Versatile ${role} with deep expertise in ${skills}, delivering high-performance embedded and software solutions. Led architecture decisions for IoT platforms serving 100K+ devices.`,
+        fresher: (role, skills) => `Enthusiastic and analytical ${role} graduate with solid foundations in ${skills}. Skilled in technical problem solving, engineering principles, and cross-functional project collaboration.`,
+        intern: (role, skills) => `Motivated ${role} intern with hands-on project experience in ${skills} and a strong commitment to quality standards and technical execution.`,
+        experienced: (role, skills) => `Results-oriented ${role} with a proven record of delivering high-impact engineering solutions using ${skills}. Experienced in technical design, process improvement, and stakeholder alignment.`,
       },
-      defaultSkills: 'C/C++, Python, FPGA, Embedded Linux, Verilog',
+      defaultSkills: 'technical problem solving, engineering analysis, project documentation',
       bulletPatterns: [
-        { match: ['embedded', 'firmware', 'microcontroller', 'arduino', 'stm32'], out: 'Developed real-time firmware for STM32 microcontroller using FreeRTOS, achieving deterministic response times under 5ms for sensor data acquisition.' },
-        { match: ['fpga', 'verilog', 'vhdl'], out: 'Implemented AES-128 encryption module in Verilog on Xilinx Artix-7 FPGA, achieving 1.2 Gbps throughput with 60% LUT utilization.' },
-        { match: ['iot', 'sensor', 'protocol'], out: 'Designed IoT sensor network using MQTT over LTE-M, reducing telemetry latency from 2s to 180ms while cutting power consumption by 35%.' },
+        { match: ['design', 'project', 'plan'], out: 'Executed engineering design and analysis workflows, delivering comprehensive project documentation ahead of schedule.' },
+        { match: ['test', 'quality', 'inspect'], out: 'Conducted rigorous quality and performance testing, identifying potential failure modes and verifying design robustness.' },
       ],
       atsKeywords: {
-        matched: ['Embedded Systems', 'C/C++', 'FPGA', 'Python', 'Linux', 'RTOS', 'Hardware Debugging'],
-        missing: ['RISC-V Architecture', 'Yocto Linux Build', 'Functional Safety (IEC 61508)'],
+        matched: ['Engineering Analysis', 'Project Management', 'Technical Documentation', 'Problem Solving'],
+        missing: ['Root Cause Analysis', 'Quality Assurance', 'Process Optimization'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how would you debug a hard fault in an ARM Cortex-M based system?`, kp: ['Fault Status Registers (SCB->HFSR)', 'Stack frame analysis', 'JTAG/SWD debugger'], ans: 'I read SCB->HFSR and SCB->CFSR to identify fault type, inspect the stacked PC at time of fault via debugger, check for stack overflow using canary patterns, and use ITM trace to replay the execution path.' },
-      ],
-    },
-    '_default': {
-      verbs: genericVerbs,
-      summaries: {
-        fresher: (role, skills) => `Enthusiastic ${role} graduate with strong fundamentals in ${skills}. Experienced in project-based learning, technical problem solving, and cross-disciplinary collaboration.`,
-        intern: (role, skills) => `Motivated ${role} intern with applied knowledge in ${skills} and a strong aptitude for analytical and design challenges.`,
-        experienced: (role, skills) => `Results-oriented ${role} with a proven record of delivering high-impact engineering solutions using ${skills}. Skilled in stakeholder management and process optimization.`,
-      },
-      defaultSkills: 'engineering fundamentals, technical analysis',
-      bulletPatterns: [],
-      atsKeywords: { matched: ['Engineering Analysis', 'Project Management', 'Technical Documentation'], missing: ['Industry Standards', 'Root Cause Analysis'] },
-      interviewQs: [
-        { q: (role) => `Describe a challenging project as a ${role} and how you overcame obstacles.`, kp: ['Problem identification', 'Solution design', 'Outcome'], ans: 'I identify the core constraint, break it into sub-tasks, iterate with stakeholders, and document lessons learned.' },
+        { q: (role) => `Describe a complex engineering challenge you resolved as a ${role}.`, kp: ['Problem identification', 'Iterative solution design', 'Quantifiable outcome'], ans: 'I defined the root constraint, created a structured test plan, validated alternatives with simulations, and deployed the optimal solution on schedule.' },
       ],
     },
   },
 
-  'Computer Science & IT': {
-    'Software Development': {
-      verbs: ['Built', 'Architected', 'Shipped', 'Refactored', 'Deployed', 'Optimized', 'Integrated'],
+  // ─────────────────────────────────────────────────────────────
+  //  MEDICAL & HEALTHCARE
+  // ─────────────────────────────────────────────────────────────
+  'Medical & Healthcare': {
+    'MBBS': {
+      verbs: ['Diagnosed', 'Treated', 'Managed', 'Assessed', 'Counseled', 'Coordinated', 'Administered'],
       summaries: {
-        fresher: (role, skills) => `Passionate ${role} with strong command of ${skills}. Built full-stack applications and contributed to open-source projects. Focused on clean code, scalability, and test-driven development.`,
-        intern: (role, skills) => `Software engineering intern with hands-on exposure to ${skills}, REST API design, and Agile workflows. Quick learner with a keen interest in system design and performance.`,
-        experienced: (role, skills) => `Seasoned ${role} with ${skills} expertise, delivering scalable microservices and cloud-native applications. Reduced system latency by 40% and shipped high-quality code in CI/CD environments.`,
+        fresher: (role, skills) => `Dedicated ${role} graduate with comprehensive clinical training across internal medicine, surgery, pediatrics, and emergency care. Proficient in ${skills} with a commitment to compassionate, evidence-based patient outcomes.`,
+        intern: (role, skills) => `Medical intern with hands-on rotational experience in high-volume OPD, casualty, and inpatient wards. Skilled in ${skills}, systematic history-taking, and diagnostic evaluation.`,
+        experienced: (role, skills) => `Accomplished ${role} with extensive experience in differential diagnosis, protocol-driven clinical care, and patient management using ${skills}.`,
       },
-      defaultSkills: 'React, Node.js, Python, SQL, Docker',
+      defaultSkills: 'clinical examination, patient management, differential diagnosis, BLS/ACLS',
       bulletPatterns: [
-        { match: ['api', 'rest', 'endpoint'], out: 'Architected RESTful APIs with Node.js and Express serving 50K+ daily requests, achieving 99.9% uptime SLA.' },
-        { match: ['react', 'frontend', 'ui'], out: 'Built responsive React SPA with Redux, reducing page load time by 35% via code splitting and lazy loading.' },
-        { match: ['database', 'sql', 'query'], out: 'Optimized PostgreSQL queries with indexing and connection pooling, cutting p95 latency from 800ms to 120ms.' },
-        { match: ['deploy', 'docker', 'ci', 'cd'], out: 'Containerized microservices with Docker and automated CI/CD via GitHub Actions, cutting deployment cycle from 4 hours to 18 minutes.' },
-        { match: ['test', 'unit', 'jest'], out: 'Implemented comprehensive unit and integration test suites with Jest and Cypress, achieving 87% code coverage.' },
-        { match: ['team', 'collaborat', 'agile'], out: 'Collaborated in a 12-engineer Scrum team; consistently delivered sprint goals with less than 5% carryover.' },
+        { match: ['opd', 'patient', 'consult'], out: 'Managed 50+ OPD and inpatient cases daily, conducting comprehensive physical examinations, diagnostic evaluations, and therapeutic plans.' },
+        { match: ['emergency', 'casualty', 'resuscitat', 'icu'], out: 'Provided immediate resuscitation and critical care triage in casualty per ACLS and ATLS protocols.' },
+        { match: ['record', 'emr', 'history'], out: 'Maintained meticulous electronic medical records and clinical documentation ensuring continuity of multi-specialty care.' },
       ],
       atsKeywords: {
-        matched: ['React', 'Node.js', 'REST APIs', 'Docker', 'CI/CD', 'Git', 'Agile', 'SQL'],
-        missing: ['Kubernetes', 'System Design', 'GraphQL'],
+        matched: ['Clinical Examination', 'Patient Management', 'Differential Diagnosis', 'ACLS', 'EMR Documentation', 'Emergency Care'],
+        missing: ['NABH Standards', 'Clinical Research', 'Quality Improvement'],
       },
       interviewQs: [
-        { q: (role) => `How would you design a URL shortener service as a ${role}?`, kp: ['Base62 hashing', 'Horizontal scaling', 'Redis caching'], ans: 'Use Base62 encoding on an auto-increment ID, store mappings in PostgreSQL, cache hot URLs in Redis with TTL, and scale the API layer horizontally behind a load balancer.' },
-        { q: () => 'What strategies do you use to ensure code quality in a fast-moving environment?', kp: ['Code reviews', 'Automated testing', 'Linting pipelines'], ans: 'Mandatory PR reviews with 1 approver, ESLint/Prettier enforced via pre-commit hooks, Jest coverage gates in CI, and regular refactoring sessions.' },
+        { q: () => 'How do you approach a patient presenting with acute chest pain in casualty?', kp: ['Immediate ECG & troponin', 'OLDCART history', 'Aspirin/Nitro & STEMI pathway'], ans: 'I immediately obtain a 12-lead ECG, assess ABCs, administer aspirin, check cardiac enzymes, and activate the catheterization lab protocol if STEMI is confirmed.' },
       ],
     },
-    'Data Science & AI': {
-      verbs: ['Modeled', 'Trained', 'Analyzed', 'Deployed', 'Engineered', 'Benchmarked', 'Implemented'],
-      summaries: {
-        fresher: (role, skills) => `Analytically driven ${role} with expertise in ${skills}. Developed predictive models for real-world datasets and passionate about transforming raw data into actionable business intelligence.`,
-        intern: (role, skills) => `Data science intern skilled in ${skills}, exploratory data analysis, and ML model training. Strong grasp of statistical learning with hands-on project experience.`,
-        experienced: (role, skills) => `Senior ${role} with deep expertise in ${skills}, delivering production ML systems that drive measurable outcomes. Improved model accuracy by 22% and reduced inference latency by 60%.`,
-      },
-      defaultSkills: 'Python, TensorFlow, scikit-learn, SQL, Pandas',
-      bulletPatterns: [
-        { match: ['model', 'train', 'predict'], out: 'Trained gradient-boosting classifier on 2M+ records achieving 94.3% precision, deployed via FastAPI with sub-50ms inference.' },
-        { match: ['data', 'clean', 'preprocess', 'pipeline'], out: 'Engineered end-to-end data pipeline processing 10GB/day, reducing missing-value rate from 12% to 0.3% using imputation strategies.' },
-        { match: ['dashboard', 'visual', 'tableau', 'power bi'], out: 'Built interactive Tableau dashboards surfacing KPIs for C-suite, reducing manual reporting effort by 8 hours/week.' },
-        { match: ['nlp', 'text', 'sentiment', 'bert'], out: 'Fine-tuned BERT-based NLP model on domain-specific corpus, achieving 91% F1-score on sentiment classification.' },
-        { match: ['accuracy', 'auc', 'f1', 'metric'], out: 'Improved model AUC-ROC from 0.78 to 0.91 via feature engineering, Optuna hyperparameter tuning, and ensemble stacking.' },
-      ],
-      atsKeywords: {
-        matched: ['Python', 'Machine Learning', 'Pandas', 'scikit-learn', 'TensorFlow', 'SQL', 'Data Visualization'],
-        missing: ['MLflow', 'Feature Store', 'A/B Testing Framework'],
-      },
-      interviewQs: [
-        { q: (role) => `As a ${role}, how would you handle severe class imbalance in a fraud detection dataset?`, kp: ['SMOTE oversampling', 'Class weights in loss', 'Precision-Recall vs AUC-ROC'], ans: 'Combine SMOTE for minority class with class-weighted cross-entropy, evaluate on Precision-Recall AUC, and tune decision threshold based on business cost of false negatives.' },
-        { q: () => 'How do you validate and prevent overfitting in a production ML model?', kp: ['Train/val/test split', 'Cross-validation', 'Regularization'], ans: 'Stratified k-fold CV during training, held-out test set until final evaluation, L2 regularization and dropout, and ongoing monitoring via shadow A/B testing.' },
-      ],
-    },
-    'Cybersecurity': {
-      verbs: ['Secured', 'Audited', 'Mitigated', 'Hardened', 'Investigated', 'Configured', 'Monitored'],
-      summaries: {
-        fresher: (role, skills) => `Security-focused ${role} with expertise in ${skills} and hands-on CTF experience. Certified in fundamental security domains and committed to proactive threat mitigation.`,
-        intern: (role, skills) => `Cybersecurity intern proficient in ${skills}, vulnerability scanning, and SIEM alert triage. Passionate about ethical hacking and defensive security.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} background. Led Red Team exercises identifying 40+ critical vulnerabilities. Expert in threat modeling, incident response, and enterprise security architecture.`,
-      },
-      defaultSkills: 'Kali Linux, Nmap, Burp Suite, SIEM, Python',
-      bulletPatterns: [
-        { match: ['pentest', 'exploit', 'vulnerability', 'scan'], out: 'Conducted OWASP Top 10 penetration test across 3 web applications, identifying 14 critical vulnerabilities and delivering remediation playbooks.' },
-        { match: ['siem', 'alert', 'monitor', 'log'], out: 'Triaged 200+ daily SIEM alerts in Splunk, reducing mean-time-to-detect (MTTD) from 4 hours to 37 minutes.' },
-        { match: ['firewall', 'network', 'ips', 'ids'], out: 'Configured Next-Gen Firewall rules and IDS/IPS policies, blocking 98.4% of known malicious traffic patterns.' },
-        { match: ['incident', 'response', 'breach', 'forensic'], out: 'Led incident response for a ransomware event, containing the breach within 2 hours and recovering 100% of affected data.' },
-      ],
-      atsKeywords: {
-        matched: ['Penetration Testing', 'SIEM', 'Vulnerability Assessment', 'Firewalls', 'Incident Response', 'OWASP'],
-        missing: ['ISO 27001', 'SOC 2 Compliance', 'Threat Intelligence Platforms'],
-      },
-      interviewQs: [
-        { q: (role) => `As a ${role}, how do you approach a black-box web application penetration test?`, kp: ['Reconnaissance', 'OWASP Top 10 testing', 'CVSS-scored report'], ans: 'Passive recon (OSINT, Google dorks), active enumeration (directory busting, port scanning), test all OWASP Top 10, deliver report with CVSS scores and remediation steps.' },
-      ],
-    },
-    'DevOps & Cloud': {
-      verbs: ['Deployed', 'Automated', 'Orchestrated', 'Provisioned', 'Monitored', 'Optimized', 'Migrated'],
-      summaries: {
-        fresher: (role, skills) => `Cloud-native ${role} with expertise in ${skills}. Built CI/CD pipelines, Dockerized applications, and provisioned infrastructure with IaC tools.`,
-        intern: (role, skills) => `DevOps intern skilled in ${skills}, container orchestration, and monitoring stack setup. Experience supporting production deployments in AWS/GCP environments.`,
-        experienced: (role, skills) => `Seasoned ${role} with ${skills} expertise. Architected multi-region Kubernetes clusters serving 1M+ requests/day, achieved 99.99% uptime, and reduced cloud costs by 30%.`,
-      },
-      defaultSkills: 'Kubernetes, Docker, Terraform, AWS, CI/CD',
-      bulletPatterns: [
-        { match: ['kubernetes', 'k8s', 'pod', 'cluster'], out: 'Orchestrated 200-service microservices platform on Kubernetes (EKS), achieving zero-downtime deployments and 99.99% uptime SLA.' },
-        { match: ['terraform', 'iac', 'infrastructure'], out: 'Provisioned cloud infrastructure with Terraform across 3 AWS regions, reducing manual provisioning time by 85% and enabling full IaC reproducibility.' },
-        { match: ['pipeline', 'ci', 'cd', 'jenkins', 'github actions'], out: 'Built end-to-end CI/CD pipelines with GitHub Actions, reducing average deployment time from 2 hours to 12 minutes with automated rollback on failure.' },
-        { match: ['monitor', 'alert', 'grafana', 'prometheus'], out: 'Implemented Prometheus + Grafana monitoring stack, setting 50+ SLO-based alerts that reduced MTTR from 45 minutes to 8 minutes.' },
-      ],
-      atsKeywords: {
-        matched: ['Kubernetes', 'Docker', 'Terraform', 'AWS', 'CI/CD', 'Prometheus', 'Grafana'],
-        missing: ['Service Mesh (Istio)', 'GitOps (ArgoCD/Flux)', 'FinOps / Cloud Cost Optimization'],
-      },
-      interviewQs: [
-        { q: () => 'Explain how you would achieve zero-downtime deployment in Kubernetes.', kp: ['Rolling update strategy', 'Readiness probes', 'PodDisruptionBudget'], ans: 'Use RollingUpdate strategy with maxUnavailable=0 and maxSurge=1, configure readiness probes so traffic is only routed to healthy pods, and set PodDisruptionBudget to prevent simultaneous evictions.' },
-      ],
-    },
-    '_default': {
-      verbs: ['Built', 'Developed', 'Implemented', 'Deployed', 'Optimized', 'Engineered'],
-      summaries: {
-        fresher: (role, skills) => `Technically strong ${role} with proficiency in ${skills}. Experienced in building software solutions and solving real-world problems with code.`,
-        intern: (role, skills) => `CS intern with skills in ${skills}, software development best practices, and team collaboration using Agile methodologies.`,
-        experienced: (role, skills) => `Experienced ${role} with hands-on expertise in ${skills}. Delivered robust software products across multiple domains with a focus on reliability, performance, and security.`,
-      },
-      defaultSkills: 'programming, software development, data structures',
-      bulletPatterns: [],
-      atsKeywords: { matched: ['Programming', 'Software Development', 'Problem Solving', 'Git', 'Agile'], missing: ['System Design', 'Cloud Architecture'] },
-      interviewQs: [
-        { q: (role) => `Describe a technically challenging project you worked on as a ${role}.`, kp: ['Technical design decisions', 'Trade-offs made', 'Impact achieved'], ans: 'Design architecture considering trade-offs, implement incrementally with tests, and measure impact post-deployment.' },
-      ],
-    },
-  },
 
-  'Healthcare & Medical': {
-    'MBBS / Medicine': {
-      verbs: ['Diagnosed', 'Treated', 'Managed', 'Counseled', 'Assessed', 'Performed', 'Coordinated'],
+    'BDS': {
+      verbs: ['Diagnosed', 'Treated', 'Performed', 'Restored', 'Extracted', 'Managed', 'Educated'],
       summaries: {
-        fresher: (role, skills) => `Dedicated ${role} with clinical training across internal medicine, surgery, obstetrics, and pediatrics. Proficient in ${skills}. Committed to evidence-based patient care and continuous medical education.`,
-        intern: (role, skills) => `Medical intern with hands-on rotational experience in high-volume OPD, casualty, and ICU settings. Skilled in ${skills}, patient history-taking, and clinical documentation.`,
-        experienced: (role, skills) => `Senior ${role} with extensive experience in differential diagnosis, protocol-driven management, and clinical leadership. Expertise in ${skills} and cross-specialty collaboration in tertiary care.`,
+        fresher: (role, skills) => `Skilled ${role} with clinical training in ${skills}. Experienced in dental examinations, restorative procedures, and patient education in high-volume dental clinics.`,
+        intern: (role, skills) => `Dental intern proficient in ${skills}, radiograph interpretation, and chairside procedure assistance under specialist supervision.`,
+        experienced: (role, skills) => `Accomplished ${role} with expertise in ${skills}, advanced restorative procedures, and delivering comprehensive, pain-free dental care.`,
       },
-      defaultSkills: 'clinical examination, differential diagnosis, patient management',
+      defaultSkills: 'dental diagnostics, restorative dentistry, oral prophylaxis, patient care',
       bulletPatterns: [
-        { match: ['opd', 'consult', 'patient'], out: 'Managed 80+ OPD patients daily in a tertiary care setting, performing evidence-based history-taking, examination, and treatment planning.' },
-        { match: ['diagnosis', 'investigate', 'lab'], out: 'Applied systematic clinical reasoning to diagnose complex multi-system presentations, reducing time-to-diagnosis by 30% through structured investigation protocols.' },
-        { match: ['emergency', 'casualty', 'resuscitat'], out: 'Handled 30+ emergency cases daily in casualty, including ACLS-guided cardiac resuscitation and trauma triage per ATLS protocol.' },
-        { match: ['counsel', 'education', 'explain'], out: 'Delivered structured patient health education sessions, improving medication adherence rates by 25% in chronic disease cohorts.' },
+        { match: ['restor', 'filling', 'composite'], out: 'Performed aesthetic composite restorations and root canal treatments with rotary instrumentation, restoring full masticatory function.' },
+        { match: ['x-ray', 'radiograph', 'opg'], out: 'Interpreted intraoral periapical (IOPA) and panoramic radiographs to formulate comprehensive treatment plans.' },
+        { match: ['patient', 'hygiene', 'counsel'], out: 'Conducted preventive oral hygiene counseling, scaling, and root planing for pediatric and adult patients.' },
       ],
       atsKeywords: {
-        matched: ['Clinical Examination', 'Patient Management', 'Differential Diagnosis', 'ACLS', 'EMR Documentation', 'OPD'],
-        missing: ['NABH Standards', 'Telemedicine', 'Research Publication'],
+        matched: ['Dental Diagnostics', 'Restorative Dentistry', 'Oral Surgery', 'Patient Management', 'Radiograph Interpretation'],
+        missing: ['Digital Dentistry (CAD/CAM)', 'Implantology', 'Cosmetic Dentistry'],
       },
       interviewQs: [
-        { q: () => 'How do you approach a patient presenting with sudden onset chest pain?', kp: ['STEMI rule-out', 'OLDCART history', 'Immediate ECG + troponin'], ans: 'Obtain 12-lead ECG and troponin immediately; give aspirin 325mg and sublingual nitro if BP allows. Take OLDCART history, review risk factors, and activate cath lab if STEMI confirmed.' },
-        { q: () => 'Describe your approach to managing a patient in septic shock.', kp: ['Sepsis-3 criteria', 'Hour-1 bundle', 'Antibiotic stewardship'], ans: 'Identify septic shock by Sepsis-3. Initiate hour-1 bundle: blood cultures, broad-spectrum antibiotics, 30mL/kg IV crystalloid, vasopressors if MAP <65, lactate measurement.' },
+        { q: () => 'How do you manage patients with severe dental anxiety during invasive procedures?', kp: ['Tell-Show-Do technique', 'Rapport building', 'Local anesthesia optimization'], ans: 'I explain every step using the Tell-Show-Do method, verify profound local anesthesia, establish hand-signals for breaks, and maintain a calm, reassuring chairside manner.' },
       ],
     },
-    'Nursing': {
-      verbs: ['Administered', 'Monitored', 'Assessed', 'Educated', 'Coordinated', 'Documented', 'Assisted'],
+
+    'B.Pharm': {
+      verbs: ['Analyzed', 'Formulated', 'Monitored', 'Audited', 'Evaluated', 'Documented', 'Ensured'],
       summaries: {
-        fresher: (role, skills) => `Compassionate ${role} with clinical training in ${skills}. Skilled in patient assessment, medication administration, and holistic nursing care. Committed to patient safety and evidence-based practice.`,
-        intern: (role, skills) => `Nursing intern with hands-on experience in ${skills}, vital sign monitoring, and wound care. Adept at collaborating with interdisciplinary teams for optimal patient outcomes.`,
-        experienced: (role, skills) => `Senior ${role} with expertise in ${skills} and leadership experience in high-acuity settings. Consistently maintained patient safety standards and mentored junior nursing staff.`,
+        fresher: (role, skills) => `Detail-oriented ${role} graduate with strong academic grounding in ${skills}. Knowledgeable in GMP standards, clinical safety reporting, and drug regulatory frameworks.`,
+        intern: (role, skills) => `Pharmacy intern with hands-on experience in ${skills}, pharmaceutical analysis, and adverse drug reaction reporting in regulated environments.`,
+        experienced: (role, skills) => `Seasoned ${role} with extensive background in ${skills}, ensuring strict compliance with FDA/ICH guidelines, drug safety audits, and product quality standards.`,
       },
-      defaultSkills: 'patient assessment, medication administration, wound care',
+      defaultSkills: 'pharmacovigilance, drug safety, regulatory compliance, quality control',
       bulletPatterns: [
-        { match: ['medication', 'drug', 'administer'], out: 'Administered medications to 20+ patients per shift following the 5 Rights framework, maintaining zero medication errors over 2 years.' },
-        { match: ['vital', 'monitor', 'assess'], out: 'Monitored hemodynamic parameters for ICU patients, detecting early clinical deterioration and escalating per rapid response protocols.' },
-        { match: ['wound', 'dress', 'care'], out: 'Performed advanced wound care using evidence-based dressing techniques, reducing surgical site infection rates by 18%.' },
+        { match: ['safety', 'pharmacovigilance', 'adr'], out: 'Evaluated and processed adverse drug reaction (ADR) reports per ICH E2B guidelines, maintaining 100% regulatory reporting compliance.' },
+        { match: ['qc', 'quality', 'assay', 'hplc'], out: 'Performed raw material and finished product assays using HPLC and spectrophotometry under strict cGMP protocols.' },
+        { match: ['regulatory', 'dossier', 'compliance'], out: 'Assisted in preparing regulatory dossiers and stability data documentation for statutory drug authority submissions.' },
       ],
       atsKeywords: {
-        matched: ['Patient Assessment', 'Medication Administration', 'Vital Signs Monitoring', 'Wound Care', 'EMR Documentation', 'BLS'],
-        missing: ['ACLS Certification', 'Critical Care Nursing', 'Charge Nurse Experience'],
+        matched: ['Pharmacovigilance', 'Drug Safety', 'Regulatory Affairs', 'Quality Assurance', 'GMP Compliance', 'Clinical Research'],
+        missing: ['MedDRA Coding', 'ICH Guidelines', 'Audit Preparedness'],
       },
       interviewQs: [
-        { q: () => 'How do you prioritize care when managing multiple critically ill patients?', kp: ['Triage by acuity', 'Delegation', 'SBAR communication'], ans: 'Triage by clinical acuity—airway, hemodynamic instability, acute pain first. Delegate appropriate tasks to nursing assistants and use SBAR to escalate concerns.' },
+        { q: () => 'How do you triage and assess causality for an unexpected adverse drug reaction?', kp: ['Naranjo algorithm', 'De-challenge / Re-challenge', 'Expedited regulatory timelines'], ans: 'I apply the Naranjo algorithm to evaluate causality, check for de-challenge outcomes, cross-reference the prescribing monograph, and log expedited reporting within 15 days if serious.' },
       ],
     },
-    'Dentistry': {
-      verbs: ['Performed', 'Diagnosed', 'Treated', 'Managed', 'Restored', 'Extracted', 'Counseled'],
+
+    'B.Sc Nursing': {
+      verbs: ['Administered', 'Monitored', 'Assessed', 'Coordinated', 'Educated', 'Documented', 'Cared'],
       summaries: {
-        fresher: (role, skills) => `Skilled ${role} with clinical training in ${skills}. Experienced in diagnostics, restorative procedures, and patient communication in high-volume clinical settings.`,
-        intern: (role, skills) => `Dental intern proficient in ${skills}, dental radiograph interpretation, and chairside patient management under specialist supervision.`,
-        experienced: (role, skills) => `Accomplished ${role} with expertise in ${skills} and a growing practice managing 25+ patients daily. Skilled in complex restorations, implant prosthetics, and patient retention strategies.`,
+        fresher: (role, skills) => `Compassionate and highly trained ${role} with clinical proficiency in ${skills}. Committed to patient safety, ethical bedside care, and collaborative interdisciplinary practice.`,
+        intern: (role, skills) => `Nursing intern with practical experience in ${skills}, ICU hemodynamic monitoring, and acute care support in tertiary hospital settings.`,
+        experienced: (role, skills) => `Dedicated ${role} with proven track record in ${skills}. Experienced in managing high-acuity wards, mentoring junior nurses, and upholding zero-error medication safety.`,
       },
-      defaultSkills: 'dental diagnosis, restorative dentistry, oral surgery',
+      defaultSkills: 'patient assessment, vital signs monitoring, medication administration, wound care',
       bulletPatterns: [
-        { match: ['patient', 'opd', 'consult'], out: 'Managed 25+ dental patients per day covering diagnostics, restorations, extractions, and preventive counseling.' },
-        { match: ['implant', 'prosthetic', 'crown'], out: 'Placed and restored 50+ dental implants achieving 97% osseointegration success rate over 18-month follow-up.' },
-        { match: ['root canal', 'endo'], out: 'Performed 100+ endodontic treatments with rotary NiTi instrumentation, reducing procedural time by 30% compared to manual technique baseline.' },
+        { match: ['medication', 'dose', 'drug'], out: 'Administered IV/oral medications following the 5 Rights protocol, maintaining zero medication errors across shifts.' },
+        { match: ['vital', 'icu', 'monitor'], out: 'Monitored hemodynamic parameters in high-acuity wards, detecting clinical decompensation early and initiating rapid escalation.' },
+        { match: ['wound', 'dressing', 'sterile'], out: 'Executed sterile wound dressings and surgical drain care, reducing postoperative infection rates.' },
       ],
       atsKeywords: {
-        matched: ['Dental Diagnosis', 'Restorative Dentistry', 'Oral Surgery', 'Radiograph Interpretation', 'Patient Management'],
-        missing: ['CAD/CAM Dentistry (CEREC)', 'Lasers in Dentistry', 'Digital Smile Design'],
+        matched: ['Patient Assessment', 'Medication Administration', 'Vital Signs Monitoring', 'Wound Care', 'BLS Certification', 'EMR'],
+        missing: ['Critical Care Nursing', 'Infection Control Protocols', 'Triage Management'],
       },
       interviewQs: [
-        { q: () => 'How do you manage a patient with severe dental anxiety?', kp: ['Tell-Show-Do technique', 'Anxiolysis options', 'Rapport building'], ans: 'I use the Tell-Show-Do technique, explain each step calmly, offer breaks on patient request, and discuss conscious sedation or nitrous oxide for high-anxiety cases after proper consent.' },
+        { q: () => 'How do you prioritize patient care when managing multiple unstable patients?', kp: ['ABCs & acuity triage', 'Delegation & SBAR communication', 'Rapid response protocol'], ans: 'I prioritize based on airway, breathing, and circulatory instability, delegate routine tasks to support staff, and communicate urgent status changes to attending physicians using SBAR.' },
       ],
     },
+
     '_default': {
       verbs: ['Treated', 'Managed', 'Assessed', 'Coordinated', 'Documented', 'Performed'],
       summaries: {
-        fresher: (role, skills) => `Dedicated healthcare professional with clinical training in ${skills}. Committed to patient-centered care and evidence-based practice.`,
-        intern: (role, skills) => `Healthcare intern with practical experience in ${skills} and exposure to multidisciplinary clinical teams.`,
-        experienced: (role, skills) => `Experienced ${role} with ${skills} expertise and a proven record of delivering high-quality, compassionate patient care in fast-paced clinical environments.`,
+        fresher: (role, skills) => `Dedicated healthcare professional with comprehensive training in ${skills}. Committed to delivering evidence-based patient care, safety compliance, and interdisciplinary collaboration.`,
+        intern: (role, skills) => `Healthcare intern with practical clinical experience in ${skills} and exposure to multifaceted hospital workflows.`,
+        experienced: (role, skills) => `Accomplished healthcare professional with proven expertise in ${skills} and a strong record of delivering high-quality, patient-centric outcomes in clinical environments.`,
       },
-      defaultSkills: 'clinical assessment, patient care, documentation',
-      bulletPatterns: [],
-      atsKeywords: { matched: ['Patient Care', 'Clinical Documentation', 'Evidence-Based Practice', 'Team Collaboration'], missing: ['Quality Improvement', 'NABH Standards'] },
+      defaultSkills: 'patient-centered care, clinical documentation, health assessment',
+      bulletPatterns: [
+        { match: ['patient', 'care', 'support'], out: 'Delivered compassionate, patient-centered care and adhered strictly to clinical documentation protocols.' },
+      ],
+      atsKeywords: {
+        matched: ['Patient Care', 'Clinical Documentation', 'Evidence-Based Practice', 'Healthcare Safety'],
+        missing: ['Quality Improvement', 'NABH Protocols', 'Infection Control'],
+      },
       interviewQs: [
-        { q: (role) => `As a ${role}, describe how you handle rapid patient deterioration.`, kp: ['Early warning signs', 'Escalation protocol', 'Team communication'], ans: 'Activate rapid response team, initiate ABCs, communicate via SBAR, and document actions with timestamps.' },
+        { q: (role) => `How do you ensure patient safety and error prevention in your daily duties as a ${role}?`, kp: ['Double verification checks', 'Clear communication', 'Strict protocol adherence'], ans: 'I use two-identifier verification, cross-check orders, maintain meticulous documentation, and maintain open communication across clinical teams.' },
       ],
     },
   },
 
-  'Business & Management': {
-    'Product Management': {
-      verbs: ['Launched', 'Roadmapped', 'Prioritized', 'Defined', 'Shipped', 'Strategized', 'Scaled'],
+  // ─────────────────────────────────────────────────────────────
+  //  COMMERCE & MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+  'Commerce & Management': {
+    'B.Com': {
+      verbs: ['Reconciled', 'Analyzed', 'Audited', 'Prepared', 'Managed', 'Reported', 'Calculated'],
       summaries: {
-        fresher: (role, skills) => `Analytically-minded ${role} with experience in ${skills}, user research, and Agile product development. Skilled at bridging user needs with business goals.`,
-        intern: (role, skills) => `Product intern with skills in ${skills}, A/B testing, and cross-functional collaboration. Experienced in writing clear PRDs and working with engineering and design teams.`,
-        experienced: (role, skills) => `Accomplished ${role} with a track record of ${skills}-driven product launches generating measurable revenue growth. Led 0-to-1 products and scaled features to 1M+ users.`,
+        fresher: (role, skills) => `Analytical ${role} graduate with solid expertise in ${skills}. Proficient in bookkeeping, balance sheet reconciliation, and GST/TDS statutory filings, with keen attention to detail.`,
+        intern: (role, skills) => `Accounting intern with practical experience in ${skills}, ledger scrutiny, and financial statement verification in fast-paced corporate environments.`,
+        experienced: (role, skills) => `Results-oriented ${role} with strong background in ${skills}. Skilled in streamlining accounting operations, ensuring 100% tax compliance, and delivering accurate monthly financial closes.`,
       },
-      defaultSkills: 'product strategy, Agile, user research, data analysis',
+      defaultSkills: 'financial accounting, Tally, GST compliance, taxation, MS Excel',
       bulletPatterns: [
-        { match: ['launch', 'feature', 'ship', 'product'], out: 'Launched 3 core product features in 2 quarters, driving 28% uplift in user retention and contributing $1.2M in new ARR.' },
-        { match: ['user research', 'interview', 'persona', 'feedback'], out: 'Conducted 40+ customer discovery interviews and synthesized insights into 5 actionable user personas that realigned the product roadmap.' },
-        { match: ['a/b test', 'experiment', 'conversion'], out: 'Ran 12 A/B experiments on onboarding flow, improving conversion from signup to first activation by 34%.' },
-        { match: ['roadmap', 'prioritiz', 'backlog', 'sprint'], out: 'Maintained 6-month product roadmap using RICE prioritization, aligning engineering, design, and sales stakeholders.' },
+        { match: ['reconcil', 'bank', 'ledger'], out: 'Performed monthly bank, debtor, and creditor reconciliations across 100+ accounts, identifying and resolving discrepancies.' },
+        { match: ['gst', 'tax', 'tds', 'filing'], out: 'Prepared and filed monthly GST (GSTR-1, 3B) and quarterly TDS returns, ensuring 100% compliance with statutory deadlines.' },
+        { match: ['tally', 'journal', 'entry', 'books'], out: 'Managed primary daybooks and ledger entries in Tally Prime, generating monthly P&L and balance sheet reports.' },
       ],
       atsKeywords: {
-        matched: ['Product Roadmap', 'Agile / Scrum', 'User Stories', 'A/B Testing', 'KPIs', 'PRD', 'Stakeholder Management'],
-        missing: ['OKR Framework', 'Product-led Growth (PLG)', 'Platform Strategy'],
+        matched: ['Financial Accounting', 'Tally Prime', 'GST Compliance', 'Taxation', 'Bank Reconciliation', 'Advanced Excel'],
+        missing: ['ERP Systems (SAP/Oracle)', 'Statutory Audit', 'Variance Analysis'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how do you decide what to build next?`, kp: ['RICE scoring', 'Customer research', 'OKR alignment'], ans: 'I use RICE scoring (Reach × Impact × Confidence / Effort), validate assumptions via customer interviews and usage data, then align top picks with quarterly OKRs.' },
-        { q: () => 'How do you handle stakeholder conflict about feature priority?', kp: ['Data-driven arbitration', 'RICE scoring', 'Executive escalation'], ans: 'I bring stakeholders into a structured RICE prioritization tied to OKRs. If consensus isn\'t reached, I escalate with a data-backed recommendation to the executive sponsor.' },
+        { q: () => 'Explain how you reconcile input tax credit (ITC) between GSTR-2B and purchase registers.', kp: ['Invoice matching', 'Mismatch resolution with vendors', 'Eligible vs ineligible ITC'], ans: 'I export GSTR-2B from the GST portal, use Excel VLOOKUP to match invoice numbers and amounts against our purchase register, and notify non-compliant vendors immediately.' },
       ],
     },
-    'Marketing & Sales': {
-      verbs: ['Grew', 'Scaled', 'Launched', 'Optimized', 'Generated', 'Drove', 'Increased'],
+
+    'CA': {
+      verbs: ['Audited', 'Modeled', 'Advised', 'Evaluated', 'Restructured', 'Ensured', 'Formulated'],
       summaries: {
-        fresher: (role, skills) => `Creative and data-driven ${role} with expertise in ${skills}. Managed social media growth campaigns delivering measurable engagement improvements.`,
-        intern: (role, skills) => `Marketing intern skilled in ${skills}, content creation, and digital analytics. Experience running paid and organic campaigns on Google, Meta, and LinkedIn.`,
-        experienced: (role, skills) => `Senior ${role} with extensive ${skills} expertise. Scaled brands to 100K+ followers, managed large ad budgets, and delivered 3x ROAS consistently.`,
+        fresher: (role, skills) => `Committed ${role} with in-depth knowledge of ${skills}. Experienced in statutory and internal audits, complex tax planning, and rigorous financial analysis.`,
+        intern: (role, skills) => `Articled assistant and ${role} aspirant with hands-on exposure to ${skills}, statutory audit procedures, and tax assessment filings across diverse industries.`,
+        experienced: (role, skills) => `Senior ${role} with demonstrated excellence in ${skills}. Proven track record in corporate restructuring, risk mitigation, and advisory for multi-crore enterprises.`,
       },
-      defaultSkills: 'digital marketing, SEO, Google Analytics, Meta Ads',
+      defaultSkills: 'statutory audit, direct & indirect taxation, IFRS/GAAP, financial reporting, risk advisory',
       bulletPatterns: [
-        { match: ['seo', 'organic', 'keyword', 'search'], out: 'Executed technical SEO strategy growing organic traffic from 5K to 80K monthly sessions in 8 months.' },
-        { match: ['ad', 'campaign', 'paid', 'meta', 'google'], out: 'Managed Rs 45L/month Google and Meta ad campaigns achieving 3.8x ROAS through audience segmentation and creative A/B testing.' },
-        { match: ['social', 'instagram', 'linkedin', 'follower'], out: 'Grew brand LinkedIn page from 2K to 28K followers in 6 months via data-driven content calendar and employee advocacy programs.' },
-        { match: ['email', 'newsletter', 'campaign'], out: 'Designed automated email nurture sequences achieving 42% open rate and 11% CTR, converting 18% of leads to qualified opportunities.' },
+        { match: ['audit', 'statutory', 'internal'], out: 'Conducted statutory and tax audits for corporate clients per Standards on Auditing, ensuring complete regulatory compliance.' },
+        { match: ['ifrs', 'gaap', 'financial statement'], out: 'Drafted complete financial statements and notes to accounts complying with Ind AS and IFRS frameworks.' },
+        { match: ['tax', 'assessment', 'planning'], out: 'Formulated tax planning strategies and represented corporate clients during assessment proceedings, mitigating tax exposure.' },
       ],
       atsKeywords: {
-        matched: ['SEO', 'Google Ads', 'Meta Ads', 'Content Marketing', 'Google Analytics 4', 'CRM', 'Email Marketing'],
-        missing: ['Marketing Automation (HubSpot)', 'Product-led Growth', 'Attribution Modelling'],
+        matched: ['Statutory Audit', 'Direct & Indirect Tax', 'IFRS / Ind AS', 'Financial Reporting', 'Internal Controls', 'Risk Advisory'],
+        missing: ['Forensic Accounting', 'Due Diligence', 'M&A Valuation'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how do you measure campaign success?`, kp: ['ROAS, CAC, LTV', 'Attribution model', 'North Star Metric'], ans: 'I define ROAS, CAC, and CTR before launch, use multi-touch attribution in GA4, and evaluate cohort LTV to ensure CAC payback period is acceptable.' },
+        { q: () => 'How do you assess internal financial controls (IFC) during a statutory audit?', kp: ['Walkthrough tests', 'Design vs operating effectiveness', 'Material weakness reporting'], ans: 'I map core business processes, test control design via walkthroughs, perform sample testing for operating effectiveness, and report identified deficiencies to the audit committee.' },
       ],
     },
+
+    'BBA': {
+      verbs: ['Accelerated', 'Managed', 'Coordinated', 'Executed', 'Promoted', 'Negotiated', 'Streamlined'],
+      summaries: {
+        fresher: (role, skills) => `Energetic ${role} graduate with a strong foundation in ${skills}. Adept at identifying market opportunities, executing strategic sales initiatives, and cultivating key client partnerships.`,
+        intern: (role, skills) => `Business administration intern skilled in ${skills}, competitive market analysis, and CRM pipeline management.`,
+        experienced: (role, skills) => `Dynamic ${role} with proven success in ${skills}. Experienced in scaling operational efficiency, driving revenue expansion, and managing cross-functional teams.`,
+      },
+      defaultSkills: 'business development, operations management, market research, client relations, sales',
+      bulletPatterns: [
+        { match: ['lead', 'sales', 'business development'], out: 'Generated 40+ qualified enterprise B2B leads monthly, expanding business pipeline by 35% through targeted outbound outreach.' },
+        { match: ['client', 'relationship', 'crm'], out: 'Managed 50+ key client accounts in CRM, maintaining a 94% client satisfaction rate and driving renewal growth.' },
+        { match: ['market', 'research', 'competitor'], out: 'Conducted comprehensive competitor benchmarking and market sizing studies that guided product pricing strategies.' },
+      ],
+      atsKeywords: {
+        matched: ['Business Development', 'Market Research', 'Client Relationship Management', 'Sales Strategy', 'Operations Management'],
+        missing: ['Financial Modeling', 'Data Analytics', 'Agile Methodologies'],
+      },
+      interviewQs: [
+        { q: (role) => `As a ${role}, how do you qualify new business opportunities?`, kp: ['BANT framework (Budget, Authority, Need, Timeline)', 'Pain-point discovery', 'Value proposition alignment'], ans: 'I use the BANT framework to assess budget, decision authority, core pain-point severity, and implementation timeline before advancing leads into formal proposals.' },
+      ],
+    },
+
+    'MBA': {
+      verbs: ['Spearheaded', 'Strategized', 'Scaled', 'Optimized', 'Led', 'Directed', 'Formulated'],
+      summaries: {
+        fresher: (role, skills) => `Strategic and results-driven ${role} graduate with expertise in ${skills}. Skilled in market sizing, financial modeling, and translating qualitative insights into high-impact business strategies.`,
+        intern: (role, skills) => `Management intern with hands-on experience in ${skills}, cross-functional roadmap alignment, and executive data presentation.`,
+        experienced: (role, skills) => `Accomplished ${role} with extensive track record in ${skills}. Successfully launched 0-to-1 initiatives, accelerated P&L growth, and guided cross-functional teams to exceed corporate OKRs.`,
+      },
+      defaultSkills: 'business strategy, project management, financial analysis, stakeholder management, analytics',
+      bulletPatterns: [
+        { match: ['strategy', 'growth', 'roadmap'], out: 'Formulated 12-month business expansion roadmap, aligning cross-functional leadership and accelerating divisional ARR by 24%.' },
+        { match: ['product', 'launch', 'feature'], out: 'Spearheaded end-to-end product feature launches, conducting user discovery and driving a 30% increase in active user adoption.' },
+        { match: ['cost', 'p&l', 'revenue', 'financial'], out: 'Analyzed divisional P&L statements and unit economics, identifying operational efficiencies that saved $450K annually.' },
+      ],
+      atsKeywords: {
+        matched: ['Business Strategy', 'Stakeholder Management', 'P&L Management', 'KPI Tracking', 'Product Roadmap', 'Financial Analysis'],
+        missing: ['Design Thinking', 'Change Management', 'Go-To-Market (GTM) Strategy'],
+      },
+      interviewQs: [
+        { q: (role) => `How do you resolve conflicting priorities among key stakeholders as a ${role}?`, kp: ['Data-driven framework (e.g. RICE)', 'Alignment with business OKRs', 'Transparent trade-off communication'], ans: 'I evaluate initiatives using a quantitative framework tied to executive OKRs, present trade-offs transparently with data, and guide stakeholders toward consensus on maximum business value.' },
+      ],
+    },
+
+    'CS (Company Secretary)': {
+      verbs: ['Drafted', 'Advised', 'Ensured', 'Filed', 'Monitored', 'Reviewed', 'Liaised'],
+      summaries: {
+        fresher: (role, skills) => `Meticulous ${role} with rigorous training in ${skills}. Proficient in MCA e-filings, secretarial standards, and ensuring strict adherence to the Companies Act.`,
+        intern: (role, skills) => `Secretarial trainee skilled in ${skills}, preparing board minutes, and managing statutory register documentation.`,
+        experienced: (role, skills) => `Senior ${role} with deep command of ${skills}, SEBI compliance, and advising corporate boards on legal risk management and ethical governance.`,
+      },
+      defaultSkills: 'corporate governance, company law compliance, secretarial audit, regulatory filings',
+      bulletPatterns: [
+        { match: ['mca', 'filing', 'compliance'], out: 'Executed statutory MCA e-filings (MGT-7, AOC-4, DIR-12) with 100% adherence to Companies Act statutory deadlines.' },
+        { match: ['board', 'meeting', 'minute', 'resolution'], out: 'Drafted formal board meeting notices, agendas, resolutions, and minutes compliant with Secretarial Standards (SS-1, SS-2).' },
+        { match: ['register', 'share', 'transfer'], out: 'Maintained and audited statutory registers, share transfer documentation, and charge records for corporate entities.' },
+      ],
+      atsKeywords: {
+        matched: ['Corporate Governance', 'Company Law Compliance', 'Secretarial Standards', 'MCA Filings', 'Board Resolutions', 'Due Diligence'],
+        missing: ['SEBI LODR Compliance', 'Insolvency & Bankruptcy Code', 'Cross-border Regulatory Compliance'],
+      },
+      interviewQs: [
+        { q: () => 'What is the procedure for convening and recording an extraordinary general meeting (EGM)?', kp: ['21-day clear notice or shorter consent', 'Quorum verification', 'Secretarial Standard SS-2 compliance'], ans: 'I prepare the notice with explanatory statement under Section 102, dispatch 21 clear days in advance, verify quorum at meeting commencement, and record minutes within 30 days per SS-2.' },
+      ],
+    },
+
     '_default': {
-      verbs: ['Led', 'Managed', 'Delivered', 'Strategized', 'Optimized', 'Collaborated', 'Scaled'],
+      verbs: ['Led', 'Managed', 'Delivered', 'Strategized', 'Optimized', 'Collaborated'],
       summaries: {
-        fresher: (role, skills) => `Ambitious ${role} graduate with a strong foundation in ${skills}. Skilled at problem-solving, cross-functional collaboration, and driving business outcomes.`,
-        intern: (role, skills) => `Business intern with exposure to ${skills}, data-driven decision making, and stakeholder management.`,
-        experienced: (role, skills) => `Experienced ${role} with ${skills} expertise and a track record of strategic business impact, team management, and scalable process building.`,
+        fresher: (role, skills) => `Ambitious and analytical ${role} graduate with strong competency in ${skills}. Eager to drive business growth, streamline organizational workflows, and deliver measurable commercial results.`,
+        intern: (role, skills) => `Business intern with practical experience in ${skills}, analytical reporting, and supporting core enterprise operations.`,
+        experienced: (role, skills) => `Accomplished ${role} with proven track record in ${skills}. Experienced in operational management, driving revenue improvements, and optimizing cross-departmental collaboration.`,
       },
-      defaultSkills: 'business analysis, strategic planning, stakeholder management',
-      bulletPatterns: [],
-      atsKeywords: { matched: ['Business Analysis', 'Strategic Planning', 'Stakeholder Management', 'Project Management'], missing: ['OKR Framework', 'P&L Management'] },
+      defaultSkills: 'business analysis, operational planning, stakeholder communication, financial acumen',
+      bulletPatterns: [
+        { match: ['business', 'operation', 'process'], out: 'Analyzed core business workflows, implementing improvements that reduced operational turnaround time by 20%.' },
+      ],
+      atsKeywords: {
+        matched: ['Business Analysis', 'Operational Planning', 'Financial Acumen', 'Project Management'],
+        missing: ['KPI Optimization', 'Risk Mitigation', 'Strategic Leadership'],
+      },
       interviewQs: [
-        { q: (role) => `Tell me about a time you drove significant business impact as a ${role}.`, kp: ['Situation', 'Your specific actions', 'Quantifiable result'], ans: 'Use the STAR framework with specific metrics.' },
+        { q: (role) => `Tell me about a time you optimized a business workflow as a ${role}.`, kp: ['Bottleneck identification', 'Process change implementation', 'Measurable ROI'], ans: 'I mapped the existing process to identify redundant handoffs, automated reporting via dashboards, and reduced turnaround time by 30%.' },
       ],
     },
   },
 
-  'Finance & Accounting': {
-    '_default': {
-      verbs: ['Analyzed', 'Modeled', 'Audited', 'Forecasted', 'Reconciled', 'Managed', 'Reported'],
+  // ─────────────────────────────────────────────────────────────
+  //  SCIENCE & TECHNOLOGY
+  // ─────────────────────────────────────────────────────────────
+  'Science & Technology': {
+    'B.Sc Computer Science': {
+      verbs: ['Built', 'Programmed', 'Tested', 'Optimized', 'Implemented', 'Developed', 'Maintained'],
       summaries: {
-        fresher: (role, skills) => `Analytical ${role} with expertise in ${skills} and strong foundations in financial modeling, accounting principles, and regulatory compliance.`,
-        intern: (role, skills) => `Finance intern proficient in ${skills}, financial statement analysis, and Excel modeling. Exposure to valuation, budgeting, and reconciliation workflows.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} expertise. Led audits, built DCF models for M&A transactions, and managed P&L reporting for multi-crore business units.`,
+        fresher: (role, skills) => `Technically agile ${role} graduate with solid programming fundamentals in ${skills}. Passionate about software development, algorithm optimization, and building robust digital applications.`,
+        intern: (role, skills) => `Computer science intern with hands-on project experience in ${skills}, application debugging, and modern version control workflows.`,
+        experienced: (role, skills) => `Skilled ${role} with strong background in ${skills}. Proven record of engineering reliable software modules, writing maintainable code, and optimizing computational performance.`,
       },
-      defaultSkills: 'Excel, financial modeling, accounting standards, Tally',
+      defaultSkills: 'Python, Java, Web Development, SQL, Data Structures',
       bulletPatterns: [
-        { match: ['model', 'dcf', 'valuation'], out: 'Built 3-statement financial model and DCF valuation for a Rs 120Cr acquisition, influencing board-level investment decision.' },
-        { match: ['audit', 'compliance', 'reconcil'], out: 'Conducted statutory audit for 3 corporate clients, identifying Rs 18L in unreported liabilities and ensuring full IGAAP compliance.' },
-        { match: ['budget', 'forecast', 'variance'], out: 'Led annual budgeting cycle for 4 business units, reducing forecast variance from 14% to 4% through bottom-up modeling.' },
-        { match: ['tax', 'gst', 'tds', 'compliance'], out: 'Filed 24 GST returns and managed TDS reconciliation for 300+ vendor accounts, maintaining 100% regulatory compliance record.' },
+        { match: ['python', 'script', 'automation'], out: 'Developed modular Python applications and automated scripts, cutting manual data processing time by 60%.' },
+        { match: ['web', 'html', 'css', 'javascript'], out: 'Built interactive and responsive web interfaces using JavaScript and modern styling, ensuring cross-browser compatibility.' },
+        { match: ['sql', 'database', 'query'], out: 'Designed relational database schemas and optimized SQL queries for high-throughput transactional storage.' },
       ],
       atsKeywords: {
-        matched: ['Financial Modelling', 'Excel', 'GAAP/IFRS', 'Budgeting', 'Audit', 'GST', 'Tally'],
-        missing: ['Power BI Dashboards', 'ERP (SAP/Oracle)', 'Advanced Valuation (LBO)'],
+        matched: ['Python', 'Java', 'SQL', 'Data Structures', 'Web Development', 'Git', 'Algorithms'],
+        missing: ['Cloud Platforms', 'Containerization (Docker)', 'Automated Unit Testing'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, walk me through building a 3-statement financial model.`, kp: ['Assumptions sheet', 'IS to BS to CF linkage', 'Interest circularity'], ans: 'Build assumptions sheet first, then IS (revenue, COGS, EBIT), link retained earnings to balance sheet equity, and construct cash flow from IS + BS changes. Use an iteration switch for interest circularity.' },
+        { q: (role) => `How do you analyze the time and space complexity of an algorithm as a ${role}?`, kp: ['Big-O notation', 'Worst-case vs average-case', 'Auxiliary space trade-offs'], ans: 'I use Big-O asymptotic notation to evaluate how runtime scales with input size n, analyze nested loops or recursions, and evaluate auxiliary memory requirements against performance needs.' },
       ],
     },
-  },
 
-  'Design & Creative': {
-    'UI/UX Design': {
-      verbs: ['Designed', 'Prototyped', 'Researched', 'Iterated', 'Delivered', 'Improved', 'Built'],
+    'B.Sc IT': {
+      verbs: ['Configured', 'Maintained', 'Supported', 'Administered', 'Resolved', 'Implemented', 'Monitored'],
       summaries: {
-        fresher: (role, skills) => `User-centric ${role} proficient in ${skills}. Crafted design solutions grounded in user research, usability testing, and design systems thinking.`,
-        intern: (role, skills) => `UX design intern with skills in ${skills}, journey mapping, and high-fidelity prototyping. Delivered redesigns improving usability scores by 25%.`,
-        experienced: (role, skills) => `Seasoned ${role} with ${skills} expertise. Led end-to-end design for 10+ shipped digital products, improving NPS by 30+ points and reducing support tickets by 40%.`,
+        fresher: (role, skills) => `Detail-oriented ${role} graduate with foundational expertise in ${skills}. Skilled in database operations, network setup, and providing dependable IT system support.`,
+        intern: (role, skills) => `IT systems intern proficient in ${skills}, technical troubleshooting, and supporting enterprise infrastructure uptime.`,
+        experienced: (role, skills) => `Competent ${role} with extensive experience in ${skills}. Experienced in managing corporate network infrastructure, database administration, and rapid incident resolution.`,
       },
-      defaultSkills: 'Figma, user research, prototyping, design systems',
+      defaultSkills: 'Database Management, System Administration, Networking, Cloud Basics, SQL',
       bulletPatterns: [
-        { match: ['figma', 'wireframe', 'prototype'], out: 'Designed interactive high-fidelity Figma prototype (120+ screens) for fintech mobile app, validated with 15-participant usability study.' },
-        { match: ['user research', 'interview', 'usability'], out: 'Conducted 20 user interviews and synthesized insights into affinity maps, identifying 3 critical pain points driving the Q2 redesign roadmap.' },
-        { match: ['design system', 'component', 'library'], out: 'Built a 150-component Figma design system adopted by 8 product teams, reducing design-to-dev handoff time by 45%.' },
-        { match: ['conversion', 'engagement', 'retention', 'metric'], out: 'Redesigned checkout flow via A/B testing, achieving 22% increase in purchase completion and 18% reduction in cart abandonment.' },
+        { match: ['network', 'lan', 'wan', 'router'], out: 'Configured and maintained local network infrastructure, VLANs, and routers ensuring seamless connectivity and high security.' },
+        { match: ['database', 'backup', 'admin'], out: 'Administered MySQL and SQL Server databases, scheduling automated backups and optimizing query indices.' },
+        { match: ['support', 'ticket', 'troubleshoot'], out: 'Resolved 300+ technical IT support tickets adhering to strict SLA response times and high user satisfaction.' },
       ],
       atsKeywords: {
-        matched: ['Figma', 'UX Research', 'Prototyping', 'Design Systems', 'Usability Testing', 'Information Architecture'],
-        missing: ['Accessibility (WCAG 2.1)', 'Motion Design', 'Design Tokens'],
+        matched: ['Database Management', 'System Administration', 'Network Protocols', 'SQL', 'IT Troubleshooting', 'Cloud Fundamentals'],
+        missing: ['Cybersecurity Best Practices', 'Infrastructure as Code', 'ITIL Service Management'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, walk me through your design process for a new feature.`, kp: ['Double Diamond', 'Research methods', 'Testing and iteration'], ans: 'Discover (interviews, competitive analysis), Define (problem statement, personas), Develop (wireframes, prototype), Deliver (usability testing, developer handoff, success metrics).' },
+        { q: () => 'Explain how DNS resolution works when a user types a web address.', kp: ['Browser cache & OS hosts', 'Recursive resolver & root servers', 'Authoritative nameservers & A records'], ans: 'The browser checks cache and OS resolver, queries the recursive DNS server, traverses root and TLD servers, and queries the authoritative nameserver to obtain the corresponding IP address.' },
       ],
     },
-    '_default': {
-      verbs: ['Designed', 'Created', 'Crafted', 'Delivered', 'Developed', 'Illustrated'],
-      summaries: {
-        fresher: (role, skills) => `Creative ${role} with a strong portfolio in ${skills}. Passionate about translating complex ideas into clear, beautiful visual communications.`,
-        intern: (role, skills) => `Design intern with hands-on experience in ${skills}, brand identity, and creative collaboration across digital and print mediums.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} expertise and a portfolio of brand-defining creative work. Led design strategy for campaigns reaching 5M+ impressions.`,
-      },
-      defaultSkills: 'Adobe Creative Suite, visual design, typography',
-      bulletPatterns: [],
-      atsKeywords: { matched: ['Adobe Illustrator', 'Photoshop', 'Brand Design', 'Typography', 'Color Theory'], missing: ['Motion Design', 'Design Systems'] },
-      interviewQs: [
-        { q: (role) => `How do you handle feedback that conflicts with your design vision as a ${role}?`, kp: ['Data over opinion', 'User testing evidence', 'Collaborative iteration'], ans: 'I separate personal preference from user needs, present design rationale tied to research, and incorporate valid feedback into a revised iteration tested with real users.' },
-      ],
-    },
-  },
 
-  'Science & Research': {
-    '_default': {
-      verbs: ['Investigated', 'Analyzed', 'Synthesized', 'Published', 'Developed', 'Collaborated', 'Validated'],
+    'BCA': {
+      verbs: ['Developed', 'Built', 'Designed', 'Implemented', 'Integrated', 'Tested', 'Deployed'],
       summaries: {
-        fresher: (role, skills) => `Research-driven scientist with expertise in ${skills}. Conducted independent projects resulting in actionable insights and academic contributions.`,
-        intern: (role, skills) => `Research intern proficient in ${skills} and laboratory methodologies. Experienced in experimental design, data collection, and scientific writing.`,
-        experienced: (role, skills) => `Senior researcher with deep expertise in ${skills}. Published 8 peer-reviewed papers, secured 2 research grants, and mentored graduate students in advanced experimental methodologies.`,
+        fresher: (role, skills) => `Enthusiastic ${role} graduate with practical capabilities in ${skills}. Passionate about designing dynamic web interfaces, database-backed applications, and modern user experiences.`,
+        intern: (role, skills) => `Application development intern with hands-on experience in ${skills}, API integration, and front-to-back web development workflows.`,
+        experienced: (role, skills) => `Accomplished ${role} with proven track record in ${skills}. Skilled in delivering end-to-end web applications, improving UI responsiveness, and integrating secure database solutions.`,
       },
-      defaultSkills: 'experimental design, data analysis, scientific writing, MATLAB',
+      defaultSkills: 'JavaScript, Python, Web Development, Database Management, OOP',
       bulletPatterns: [
-        { match: ['publish', 'paper', 'journal', 'article'], out: 'Published 3 peer-reviewed articles in Q1 journals (Impact Factor >4.0), advancing state-of-the-art in the domain.' },
-        { match: ['experiment', 'protocol', 'lab', 'test'], out: 'Designed and executed 150+ controlled experiments, reducing protocol error rate by 35% through standardized SOPs.' },
-        { match: ['data', 'analysis', 'statistic', 'matlab'], out: 'Performed multivariate statistical analysis on 50K+ data points, identifying 4 statistically significant correlations (p<0.05).' },
-        { match: ['grant', 'funding', 'proposal'], out: 'Co-authored research grant proposal awarded Rs 25L from DST-SERB for 3-year material characterization project.' },
+        { match: ['web', 'react', 'javascript', 'frontend'], out: 'Developed responsive frontend interfaces with modern JavaScript libraries, delivering intuitive UI and fast page load times.' },
+        { match: ['backend', 'php', 'node', 'database'], out: 'Engineered backend application logic and connected relational databases to serve dynamic content securely.' },
+        { match: ['project', 'fullstack', 'crud'], out: 'Built complete full-stack CRUD applications featuring authentication, role-based access control, and form validation.' },
       ],
       atsKeywords: {
-        matched: ['Research Methodology', 'Data Analysis', 'Scientific Writing', 'MATLAB', 'Python', 'Statistical Analysis'],
-        missing: ['Grant Writing', 'Peer Review Experience', 'Spectroscopy Methods'],
+        matched: ['Web Development', 'JavaScript', 'Database Management', 'Python', 'Object-Oriented Programming', 'SQL'],
+        missing: ['REST API Architecture', 'Cloud Deployment', 'Version Control / Git'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how do you ensure reproducibility and rigor in your research?`, kp: ['Preregistration', 'Lab notebooks', 'Statistical power analysis'], ans: 'Preregister hypotheses, maintain detailed lab notebooks, power-analyze before data collection, and share data/code on OSF for reproducibility.' },
+        { q: (role) => `How do you prevent SQL injection vulnerabilities in web applications as a ${role}?`, kp: ['Parameterized queries / Prepared statements', 'Input sanitization & validation', 'ORM abstraction'], ans: 'I always use parameterized queries or prepared statements, enforce server-side input validation, and use modern ORMs that automatically escape parameter values.' },
       ],
     },
-  },
 
-  'Law': {
-    '_default': {
-      verbs: ['Argued', 'Drafted', 'Advised', 'Researched', 'Negotiated', 'Represented', 'Reviewed'],
+    'MCA': {
+      verbs: ['Architected', 'Engineered', 'Shipped', 'Deployed', 'Optimized', 'Refactored', 'Built'],
       summaries: {
-        fresher: (role, skills) => `Diligent ${role} with expertise in ${skills} and strong foundations in legal research, contract drafting, and moot court advocacy.`,
-        intern: (role, skills) => `Legal intern proficient in ${skills}, case research via SCC/Manupatra, and drafting pleadings under senior advocate supervision.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} expertise. Represented clients in 150+ matters across trial and appellate courts, specializing in ${skills}-related disputes.`,
+        fresher: (role, skills) => `Technically proficient ${role} graduate with strong command of ${skills}. Experienced in designing full-stack software architectures, cloud deployment, and scalable backend services.`,
+        intern: (role, skills) => `Software engineering post-graduate intern skilled in ${skills}, microservices integration, and test-driven development in collaborative agile teams.`,
+        experienced: (role, skills) => `Seasoned ${role} with extensive background in ${skills}. Led development of high-throughput web applications, cut cloud infrastructure costs, and enforced rigorous code quality standards.`,
       },
-      defaultSkills: 'legal research, contract drafting, SCC Online, Manupatra',
+      defaultSkills: 'Full-Stack Development, Cloud Architecture, DevOps, REST APIs, Microservices',
       bulletPatterns: [
-        { match: ['draft', 'contract', 'agreement', 'plead'], out: 'Drafted 40+ legal agreements including NDAs, SLAs, and employment contracts compliant with applicable statutory frameworks.' },
-        { match: ['research', 'case law', 'brief', 'manupatra', 'scc'], out: 'Conducted exhaustive case law research on SCC Online and Manupatra, producing legal memoranda cited in 8 High Court proceedings.' },
-        { match: ['client', 'counsel', 'advise'], out: 'Counseled 30+ corporate clients on regulatory compliance risks, enabling proactive restructuring that avoided Rs 2Cr in potential penalties.' },
-        { match: ['court', 'hearing', 'argue', 'represent'], out: 'Appeared as junior counsel in 25+ District Court hearings, obtaining interim relief in 80% of contested injunction applications.' },
+        { match: ['fullstack', 'react', 'node', 'microservice'], out: 'Architected microservices-based full-stack web platforms with React and Node.js, supporting 100K+ monthly active users.' },
+        { match: ['cloud', 'aws', 'docker', 'devops'], out: 'Containerized application components with Docker and configured automated CI/CD deployment pipelines on AWS.' },
+        { match: ['database', 'performance', 'nosql', 'mongo'], out: 'Designed hybrid SQL/NoSQL database architectures, implementing connection pooling and reducing query p95 times by 40%.' },
       ],
       atsKeywords: {
-        matched: ['Legal Research', 'Contract Drafting', 'Litigation', 'SCC Online', 'Manupatra', 'Regulatory Compliance'],
-        missing: ['Arbitration', 'Due Diligence', 'Data Protection Law (DPDP Act)'],
+        matched: ['Full-Stack Development', 'REST APIs', 'Cloud Computing', 'Database Design', 'Microservices', 'Docker', 'Agile'],
+        missing: ['Kubernetes Orchestration', 'CI/CD Pipeline Automation', 'High-Level System Design'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how do you approach due diligence for a corporate M&A transaction?`, kp: ['Legal, financial, tax DD', 'Red flag identification', 'Representations and warranties'], ans: 'I organize DD into streams (title, regulatory, litigation, IP, employment). Red flags are compiled into a risk matrix with mitigation recommendations.' },
+        { q: (role) => `How would you design a distributed caching layer for a high-traffic web application as a ${role}?`, kp: ['Cache-aside vs write-through', 'Eviction policies (LRU)', 'Cache invalidation & stampede prevention'], ans: 'I use Redis with a cache-aside strategy, configure LRU eviction, set randomized TTLs to prevent cache stampedes, and handle distributed cache misses gracefully.' },
       ],
     },
-  },
 
-  'Education & Teaching': {
-    '_default': {
-      verbs: ['Taught', 'Designed', 'Developed', 'Mentored', 'Assessed', 'Facilitated', 'Implemented'],
+    'B.Sc Agriculture': {
+      verbs: ['Researched', 'Managed', 'Implemented', 'Assessed', 'Cultivated', 'Analyzed', 'Optimized'],
       summaries: {
-        fresher: (role, skills) => `Passionate educator with expertise in ${skills}. Skilled in lesson planning, differentiated instruction, and creating inclusive learning environments.`,
-        intern: (role, skills) => `Teaching intern with hands-on experience in ${skills}, classroom management, and curriculum adaptation for diverse learners.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} expertise and a record of improving student outcomes by 30%. Led curriculum redesign and mentored 10+ junior educators.`,
+        fresher: (role, skills) => `Dedicated ${role} graduate with scientific training in ${skills}. Eager to apply modern agronomic practices, soil health diagnostics, and sustainable farm management techniques.`,
+        intern: (role, skills) => `Agricultural field intern with hands-on experience in ${skills}, crop scouting, and conducting farmer advisory programs.`,
+        experienced: (role, skills) => `Accomplished ${role} with demonstrated success in ${skills}. Proven ability to enhance crop yields, implement precision agriculture systems, and optimize commercial agribusiness operations.`,
       },
-      defaultSkills: 'curriculum design, lesson planning, classroom management',
+      defaultSkills: 'Agronomy, Soil Testing, Crop Management, Agri-Business, Precision Farming',
       bulletPatterns: [
-        { match: ['teach', 'lesson', 'class', 'student'], out: 'Taught 35+ students per class using differentiated instructional strategies, improving average test scores by 22% over one academic year.' },
-        { match: ['curriculum', 'syllabus', 'design', 'develop'], out: 'Redesigned CBSE Grade 10 Mathematics curriculum integrating real-world applications, resulting in 95% board exam pass rate.' },
-        { match: ['mentor', 'coach', 'guide', 'support'], out: 'Mentored 15 at-risk students through personalized academic support plans, reducing dropout rate in the cohort by 40%.' },
-        { match: ['technology', 'lms', 'online', 'digital'], out: 'Designed and delivered 30-hour online course on LMS reaching 800+ students with a 4.8/5.0 learner satisfaction rating.' },
+        { match: ['soil', 'testing', 'nutrient'], out: 'Conducted comprehensive soil testing and nutrient profiling, delivering fertilizer recommendations that boosted crop yield by 18%.' },
+        { match: ['crop', 'protection', 'pest', 'disease'], out: 'Formulated integrated pest management (IPM) protocols, reducing chemical pesticide dependency by 25% while preserving crop health.' },
+        { match: ['farm', 'advisory', 'agribusiness'], out: 'Led agricultural extension workshops for 500+ local farmers on climate-resilient crop varieties and precision irrigation.' },
       ],
       atsKeywords: {
-        matched: ['Curriculum Design', 'Lesson Planning', 'Student Assessment', 'Differentiated Instruction', 'Classroom Management'],
-        missing: ["Bloom's Taxonomy Application", 'IEP Development', 'EdTech Integration'],
+        matched: ['Agronomy', 'Soil Testing', 'Crop Management', 'Agribusiness', 'Farm Advisory', 'Precision Agriculture'],
+        missing: ['GIS in Agriculture', 'Sustainable Farm Certification', 'Agricultural Supply Chain'],
       },
       interviewQs: [
-        { q: (role) => `As a ${role}, how do you address diverse learning needs in a single classroom?`, kp: ['UDL framework', 'Differentiated instruction', 'Formative assessment'], ans: 'I use UDL principles—multiple means of representation, engagement, and expression—and run weekly formative assessments to identify gaps and differentiate via tiered tasks.' },
+        { q: () => 'How do you formulate an integrated pest management (IPM) strategy for a commercial crop?', kp: ['Economic threshold level (ETL)', 'Biological vs cultural vs chemical control', 'Resistance prevention'], ans: 'I establish economic threshold levels (ETL) through regular field scouting, prioritize cultural and biological controls, and apply targeted chemical treatments only as a last resort.' },
       ],
     },
-  },
 
-  'Architecture': {
     '_default': {
-      verbs: ['Designed', 'Planned', 'Coordinated', 'Drafted', 'Visualized', 'Modeled', 'Delivered'],
+      verbs: ['Analyzed', 'Developed', 'Researched', 'Tested', 'Implemented', 'Optimized'],
       summaries: {
-        fresher: (role, skills) => `Creative ${role} with expertise in ${skills}. Developed architectural projects from concept to construction documentation, with a strong foundation in design principles and building codes.`,
-        intern: (role, skills) => `Architecture intern proficient in ${skills}, 3D rendering, and working drawing preparation under licensed architect supervision.`,
-        experienced: (role, skills) => `Senior ${role} with ${skills} expertise and a portfolio of successfully delivered residential, commercial, and institutional projects. Led design teams and managed client relationships on projects valued up to Rs 50Cr.`,
+        fresher: (role, skills) => `Analytical ${role} graduate with strong grounding in ${skills}. Motivated to solve technological challenges, leverage computational tools, and drive innovative solutions.`,
+        intern: (role, skills) => `Science and technology intern with practical project experience in ${skills} and collaborative problem solving.`,
+        experienced: (role, skills) => `Results-oriented ${role} with extensive expertise in ${skills}. Skilled in applying scientific methodologies, software solutions, and continuous technical improvement.`,
       },
-      defaultSkills: 'AutoCAD, Revit, SketchUp, 3ds Max',
+      defaultSkills: 'scientific analysis, software fundamentals, analytical problem solving',
       bulletPatterns: [
-        { match: ['design', 'concept', 'layout', 'plan'], out: 'Developed concept and schematic design for 5,000 sqft commercial complex, integrating sustainable passive cooling strategies reducing AC load by 22%.' },
-        { match: ['revit', 'bim', 'model', '3d'], out: 'Created detailed BIM model in Revit for a 15-storey residential tower, enabling clash detection that identified 120+ MEP conflicts before construction.' },
-        { match: ['permit', 'approval', 'noc', 'drawing'], out: 'Prepared complete set of statutory drawings and obtained building permits from MCGM within 45 days, against average 90-day timeline.' },
+        { match: ['analysis', 'data', 'research'], out: 'Applied systematic scientific analysis and computational tools to evaluate experimental and technical datasets.' },
       ],
       atsKeywords: {
-        matched: ['AutoCAD', 'Revit', 'BIM', 'SketchUp', 'Building Codes', 'Construction Documentation'],
-        missing: ['LEED/Green Building', 'Parametric Design (Rhino/Grasshopper)', 'Project Management (PMI)'],
+        matched: ['Scientific Analysis', 'Technical Problem Solving', 'Software Fundamentals', 'Data Analysis'],
+        missing: ['Experimental Design', 'Research Methodology', 'Quality Control'],
       },
       interviewQs: [
-        { q: () => 'How do you balance aesthetic vision with practical construction constraints?', kp: ['Buildability review', 'Structural engineer collaboration', 'Value engineering'], ans: 'I involve the structural engineer and contractor early in design development. I use value engineering workshops to identify cost-optimized alternatives that maintain design intent.' },
-      ],
-    },
-  },
-
-  'Media & Communications': {
-    '_default': {
-      verbs: ['Reported', 'Created', 'Produced', 'Edited', 'Launched', 'Grew', 'Published'],
-      summaries: {
-        fresher: (role, skills) => `Creative ${role} with expertise in ${skills}. Produced engaging content across digital and print platforms, and conducted impactful journalistic and communications work.`,
-        intern: (role, skills) => `Media intern with experience in ${skills}, content production, and audience analytics. Contributed to editorial and social media teams in fast-paced environments.`,
-        experienced: (role, skills) => `Accomplished ${role} with ${skills} expertise. Led editorial teams, produced campaigns reaching 10M+ impressions, and built media brands from inception to market leadership.`,
-      },
-      defaultSkills: 'content creation, social media, editorial writing, Adobe Suite',
-      bulletPatterns: [
-        { match: ['article', 'write', 'publish', 'story'], out: 'Published 150+ investigative and feature articles with average 50K+ page views, contributing to a 35% increase in website traffic.' },
-        { match: ['social', 'follower', 'engagement', 'instagram'], out: 'Grew brand Instagram account from 8K to 120K followers in 10 months through strategic content calendar and influencer collaborations.' },
-        { match: ['video', 'youtube', 'produce', 'edit'], out: 'Produced and edited 30-episode YouTube documentary series that accumulated 2M+ views and 80K+ subscribers within 6 months of launch.' },
-        { match: ['pr', 'press', 'media', 'release'], out: 'Secured 20+ earned media placements in national publications through targeted PR outreach, generating Rs 60L equivalent media value.' },
-      ],
-      atsKeywords: {
-        matched: ['Content Creation', 'Social Media Strategy', 'Editorial Writing', 'SEO', 'Adobe Premiere', 'Analytics'],
-        missing: ['Podcast Production', 'Data Journalism', 'Audience Monetization Strategies'],
-      },
-      interviewQs: [
-        { q: (role) => `As a ${role}, how do you ensure factual accuracy in a breaking news situation?`, kp: ['Source verification (2-source rule)', 'Fact-checking tools', 'Editorial review'], ans: 'I apply the two-source rule for all factual claims, use fact-checking databases (FactCheck, Snopes for viral claims), and flag uncertain information for senior editorial review before publication.' },
+        { q: (role) => `How do you approach validating a new technological solution as a ${role}?`, kp: ['Hypothesis definition', 'Controlled testing', 'Objective metric evaluation'], ans: 'I formulate testable hypotheses, set up controlled experiments with baseline comparisons, measure performance against objective KPIs, and document findings.' },
       ],
     },
   },
@@ -564,53 +585,129 @@ const DOMAIN_CONFIG = {
 //  HELPER: resolve domain config with graceful fallback & taxonomy aliasing
 // ─────────────────────────────────────────────────────────────────────────────
 const FIELD_ALIASES = {
-  'Medical & Healthcare': 'Healthcare & Medical',
-  'Commerce & Management': 'Business & Management',
-  'Science & Technology': 'Computer Science & IT',
+  // Medical aliases
+  'Healthcare & Medical': 'Medical & Healthcare',
+  'Medical & Healthcare': 'Medical & Healthcare',
+  'Medical': 'Medical & Healthcare',
+  'Healthcare': 'Medical & Healthcare',
+
+  // Commerce aliases
+  'Business & Management': 'Commerce & Management',
+  'Commerce & Management': 'Commerce & Management',
+  'Finance & Accounting': 'Commerce & Management',
+  'Commerce': 'Commerce & Management',
+  'Management': 'Commerce & Management',
+
+  // Science aliases
+  'Computer Science & IT': 'Science & Technology',
+  'Science & Technology': 'Science & Technology',
+  'Science & Research': 'Science & Technology',
+  'Science': 'Science & Technology',
+
+  // Engineering
   'Engineering': 'Engineering',
 };
 
 const SUBFIELD_ALIASES = {
-  'Mechanical': 'Mechanical Engineering',
-  'Civil': 'Civil Engineering',
-  'Electrical': 'Electrical Engineering',
-  'CSE': 'Software Development',
-  'IT': 'DevOps & Cloud',
-  'E&TC': 'Computer Engineering',
-  'MBBS': 'MBBS / Medicine',
-  'BDS': 'Dentistry',
-  'B.Pharm': 'Pharmacy',
-  'B.Sc Nursing': 'Nursing',
-  'B.Com': '_default',
-  'CA': '_default',
-  'BBA': 'Marketing & Sales',
-  'MBA': 'Product Management',
-  'CS': '_default',
-  'CS (Company Secretary)': '_default',
-  'B.Sc Computer Science': 'Software Development',
-  'B.Sc IT': 'DevOps & Cloud',
-  'BCA': 'Software Development',
-  'MCA': 'Software Development',
-  'B.Sc Agriculture': '_default',
+  // Engineering subfields
+  'CSE': 'CSE',
+  'Computer Science': 'CSE',
+  'Computer Engineering': 'CSE',
+  'Software Development': 'CSE',
+  'IT': 'IT',
+  'Information Technology': 'IT',
+  'DevOps & Cloud': 'IT',
+  'E&TC': 'E&TC',
+  'Electronics': 'E&TC',
+  'Electronics & Communication': 'E&TC',
+  'Mechanical': 'Mechanical',
+  'Mechanical Engineering': 'Mechanical',
+  'Civil': 'Civil',
+  'Civil Engineering': 'Civil',
+  'Electrical': 'Electrical',
+  'Electrical Engineering': 'Electrical',
+
+  // Medical subfields
+  'MBBS': 'MBBS',
+  'Medicine': 'MBBS',
+  'MBBS / Medicine': 'MBBS',
+  'BDS': 'BDS',
+  'Dentistry': 'BDS',
+  'B.Pharm': 'B.Pharm',
+  'Pharmacy': 'B.Pharm',
+  'B.Sc Nursing': 'B.Sc Nursing',
+  'Nursing': 'B.Sc Nursing',
+
+  // Commerce subfields
+  'B.Com': 'B.Com',
+  'CA': 'CA',
+  'Chartered Accountant': 'CA',
+  'BBA': 'BBA',
+  'MBA': 'MBA',
+  'Product Management': 'MBA',
+  'Marketing & Sales': 'BBA',
+  'CS': 'CS (Company Secretary)',
+  'CS (Company Secretary)': 'CS (Company Secretary)',
+
+  // Science subfields
+  'B.Sc Computer Science': 'B.Sc Computer Science',
+  'B.Sc CS': 'B.Sc Computer Science',
+  'B.Sc IT': 'B.Sc IT',
+  'BCA': 'BCA',
+  'MCA': 'MCA',
+  'B.Sc Agriculture': 'B.Sc Agriculture',
+  'Agriculture': 'B.Sc Agriculture',
 };
 
-function getDomainConfig(field, subfield) {
-  const resolvedField = FIELD_ALIASES[field] || field;
-  const resolvedSubfield = SUBFIELD_ALIASES[subfield] || subfield;
+function getDomainConfig(field, subfield, role) {
+  const resolvedField = FIELD_ALIASES[field] || field || 'Engineering';
+  let resolvedSubfield = SUBFIELD_ALIASES[subfield] || subfield;
 
-  const fieldMap = DOMAIN_CONFIG[resolvedField] || DOMAIN_CONFIG[field];
-  if (!fieldMap) {
-    // Try to find the field by partial match
-    const matchedField = Object.keys(DOMAIN_CONFIG).find(
-      (k) => k.toLowerCase().includes((resolvedField || '').toLowerCase())
-    );
-    if (matchedField) {
-      const mfMap = DOMAIN_CONFIG[matchedField];
-      return mfMap[resolvedSubfield] || mfMap[subfield] || mfMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+  // If subfield is missing or not provided, infer from role if possible
+  if (!resolvedSubfield && role) {
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('software') || lowerRole.includes('frontend') || lowerRole.includes('backend') || lowerRole.includes('full-stack') || lowerRole.includes('developer') || lowerRole.includes('programmer')) {
+      resolvedSubfield = resolvedField === 'Science & Technology' ? 'B.Sc Computer Science' : 'CSE';
+    } else if (lowerRole.includes('cloud') || lowerRole.includes('devops') || lowerRole.includes('system admin') || lowerRole.includes('network')) {
+      resolvedSubfield = resolvedField === 'Science & Technology' ? 'B.Sc IT' : 'IT';
+    } else if (lowerRole.includes('mechanical') || lowerRole.includes('cad') || lowerRole.includes('solidworks') || lowerRole.includes('fea')) {
+      resolvedSubfield = 'Mechanical';
+    } else if (lowerRole.includes('civil') || lowerRole.includes('structural') || lowerRole.includes('site engineer')) {
+      resolvedSubfield = 'Civil';
+    } else if (lowerRole.includes('electrical') || lowerRole.includes('plc') || lowerRole.includes('power systems')) {
+      resolvedSubfield = 'Electrical';
+    } else if (lowerRole.includes('doctor') || lowerRole.includes('physician') || lowerRole.includes('medical') || lowerRole.includes('clinical')) {
+      resolvedSubfield = 'MBBS';
+    } else if (lowerRole.includes('dental') || lowerRole.includes('dentist')) {
+      resolvedSubfield = 'BDS';
+    } else if (lowerRole.includes('pharmac') || lowerRole.includes('drug')) {
+      resolvedSubfield = 'B.Pharm';
+    } else if (lowerRole.includes('nurse') || lowerRole.includes('nursing')) {
+      resolvedSubfield = 'B.Sc Nursing';
+    } else if (lowerRole.includes('account') || lowerRole.includes('tax') || lowerRole.includes('audit')) {
+      resolvedSubfield = 'B.Com';
     }
-    return DOMAIN_CONFIG['Engineering']['_default'];
   }
-  return fieldMap[resolvedSubfield] || fieldMap[subfield] || fieldMap['_default'] || DOMAIN_CONFIG['Engineering']['_default'];
+
+  const fieldMap = DOMAIN_CONFIG[resolvedField];
+  if (fieldMap) {
+    if (resolvedSubfield && fieldMap[resolvedSubfield]) {
+      return fieldMap[resolvedSubfield];
+    }
+    // Case-insensitive or partial match within this specific field
+    const lowerSub = (resolvedSubfield || '').toLowerCase();
+    const matchedKey = Object.keys(fieldMap).find((k) => k.toLowerCase() === lowerSub || k.toLowerCase().includes(lowerSub));
+    if (matchedKey && fieldMap[matchedKey]) {
+      return fieldMap[matchedKey];
+    }
+    // Field-specific default
+    if (fieldMap['_default']) {
+      return fieldMap['_default'];
+    }
+  }
+
+  // Universal neutral fallback (never uses mechanical CAD or unrelated technical claims)
+  return UNIVERSAL_DEFAULT_CONFIG;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -619,36 +716,45 @@ function getDomainConfig(field, subfield) {
 // ─────────────────────────────────────────────────────────────────────────────
 function pickRelevantSkills(skills, field, subfield, cfg) {
   const stored = skills?.technical || [];
-  if (stored.length === 0) return cfg.defaultSkills;
 
-  // Field-specific keyword sets for relevance check
-  const FIELD_KEYWORDS = {
-    'Computer Science & IT': ['react','node','python','java','javascript','typescript','docker','kubernetes','sql','nosql','aws','gcp','azure','django','flask','spring','mongodb','redis','api','git','linux','html','css','tensorflow','pytorch','ml','ai','devops','ci/cd','golang','rust','kotlin','swift'],
-    'Science & Technology': ['react','node','python','java','javascript','typescript','docker','kubernetes','sql','nosql','aws','gcp','azure','django','flask','spring','mongodb','redis','api','git','linux','html','css','tensorflow','pytorch','ml','ai','devops','ci/cd','golang','rust','kotlin','swift'],
-    'Engineering': ['solidworks','autocad','ansys','matlab','catia','revit','staad','etabs','plc','scada','cad','fea','gd&t','etap','verilog','vhdl','fpga','labview','proteus','3ds max','inventor','creo','nastran'],
-    'Healthcare & Medical': ['patient','clinical','diagnosis','treatment','bls','acls','icu','opd','emr','pharmacology','anatomy','nursing','mbbs','medical','surgery','dental','physiotherapy'],
-    'Medical & Healthcare': ['patient','clinical','diagnosis','treatment','bls','acls','icu','opd','emr','pharmacology','anatomy','nursing','mbbs','medical','surgery','dental','physiotherapy'],
-    'Business & Management': ['excel','powerpoint','crm','salesforce','jira','confluence','agile','scrum','okr','kpi','analytics','strategy','marketing','seo','google ads','hubspot','tableau','power bi'],
-    'Commerce & Management': ['excel','powerpoint','crm','salesforce','jira','confluence','agile','scrum','okr','kpi','analytics','strategy','marketing','seo','google ads','hubspot','tableau','power bi','tally','gst','audit'],
-    'Finance & Accounting': ['excel','bloomberg','tally','sap','quickbooks','financial modeling','valuation','dcf','ifrs','gaap','gst','tds','audit','erp','accounting','oracle financials'],
-    'Design & Creative': ['figma','adobe','photoshop','illustrator','xd','sketch','ux','ui','prototyping','design systems','after effects','premiere','indesign','canva','blender'],
-  };
+  if (stored.length > 0) {
+    // Collect domain keywords from cfg
+    const domainKeywords = [
+      ...(cfg.atsKeywords?.matched || []),
+      ...(cfg.atsKeywords?.missing || []),
+      ...(cfg.defaultSkills ? cfg.defaultSkills.split(',').map((s) => s.trim()) : [])
+    ].map((k) => k.toLowerCase());
 
-  const fieldKey = Object.keys(FIELD_KEYWORDS).find(
-    (k) => k.toLowerCase() === (field || '').toLowerCase()
-  );
+    // Check if user's skills contain domain-matching skills
+    const matchingSkills = stored.filter((userSkill) => {
+      const lower = userSkill.toLowerCase();
+      return domainKeywords.some((dk) => lower.includes(dk) || dk.includes(lower));
+    });
 
-  if (!fieldKey) return stored.slice(0, 3).join(', ') || cfg.defaultSkills;
+    if (matchingSkills.length >= 2) {
+      return matchingSkills.slice(0, 4).join(', ');
+    }
 
-  const keywords = FIELD_KEYWORDS[fieldKey];
-  const relevant = stored.filter((sk) =>
-    keywords.some((kw) => sk.toLowerCase().includes(kw))
-  );
+    // Check if user skills contain obvious cross-domain mechanical pollution in a non-mechanical field
+    const isMechanicalPollution = stored.some((s) => {
+      const low = s.toLowerCase();
+      const nonMechanicalSubfields = [
+        'CSE', 'IT', 'MBBS', 'BDS', 'B.Pharm', 'B.Sc Nursing',
+        'B.Com', 'CA', 'BBA', 'MBA', 'CS (Company Secretary)',
+        'B.Sc Computer Science', 'B.Sc IT', 'BCA', 'MCA', 'B.Sc Agriculture'
+      ];
+      if (nonMechanicalSubfields.includes(subfield) || (field && field !== 'Engineering')) {
+        return ['solidworks', 'ansys', 'fea', 'gd&t', 'catia', 'autocad mechanical'].includes(low);
+      }
+      return false;
+    });
 
-  if (relevant.length >= 2) {
-    return relevant.slice(0, 3).join(', ');
+    if (!isMechanicalPollution && stored.length > 0) {
+      return stored.slice(0, 4).join(', ');
+    }
   }
-  // User's stored skills don't match their field — use domain defaults
+
+  // User's stored skills don't match or are empty / polluted — use domain defaults
   return cfg.defaultSkills;
 }
 
@@ -657,18 +763,35 @@ function pickRelevantSkills(skills, field, subfield, cfg) {
 // ─────────────────────────────────────────────────────────────────────────────
 export const aiService = {
   /**
-   * Generates a professional summary tailored to field, subfield, and career stage.
-   * Uses field-appropriate skills and domain-specific templates.
+   * Generates a professional summary tailored to field, subfield, career stage,
+   * and actual user experience.
    */
-  async generateSummary({ role, stage, skills, experience: _experience, projects: _projects, field, subfield }) {
+  async generateSummary({ role, stage, skills, experience, projects: _projects, field, subfield }) {
     await delay(900);
-    const cfg = getDomainConfig(field, subfield);
-    // Use field-aware skill selection to avoid showing skills from wrong domains
+    const cfg = getDomainConfig(field, subfield, role);
     const topSkills = pickRelevantSkills(skills, field, subfield, cfg);
     const mainRole = role || subfield || field || 'Professional';
     const stageKey = (stage === 'Student' || stage === 'Fresher') ? 'fresher'
       : stage === 'Intern' ? 'intern'
         : 'experienced';
+
+    // Check for actual user-provided work experience
+    const validExp = Array.isArray(experience)
+      ? experience.filter((e) => e && e.company !== 'Tata Technologies' && (e.company?.trim() || e.role?.trim()))
+      : [];
+
+    if (stageKey === 'experienced' && validExp.length > 0) {
+      const primaryExp = validExp[0];
+      const comp = primaryExp.company ? ` at ${primaryExp.company}` : '';
+      return `Results-driven ${mainRole} with hands-on experience${comp} and strong expertise in ${topSkills}. Proven track record in collaborating cross-functionally, optimizing workflows, and delivering measurable impact in production environments.`;
+    }
+
+    if (stageKey === 'intern' && validExp.length > 0) {
+      const primaryExp = validExp[0];
+      const comp = primaryExp.company ? ` at ${primaryExp.company}` : '';
+      return `Motivated ${mainRole} with practical internship experience${comp} and applied skills in ${topSkills}. Eager to contribute technical diligence, collaborative problem solving, and rapid learning to forward-thinking initiatives.`;
+    }
+
     return cfg.summaries[stageKey](mainRole, topSkills);
   },
 
@@ -680,7 +803,7 @@ export const aiService = {
     const trimmed = text.trim();
     if (!trimmed) return text;
     const lower = trimmed.toLowerCase();
-    const cfg = getDomainConfig(field, subfield);
+    const cfg = getDomainConfig(field, subfield, role);
 
     for (const pattern of cfg.bulletPatterns || []) {
       if (pattern.match.some((kw) => lower.includes(kw))) {
@@ -709,7 +832,7 @@ export const aiService = {
   async analyzeResume(resumeData, targetRole, field, subfield) {
     await delay(600);
 
-    const cfg = getDomainConfig(field, subfield);
+    const cfg = getDomainConfig(field, subfield, targetRole);
     const roleLabel = targetRole || subfield || field || 'your target role';
 
     // 1. Evaluate Profile & Contact Info (Max 15)
@@ -759,7 +882,9 @@ export const aiService = {
 
     // 5. Evaluate Work Experience (Max 10)
     let experienceScore = 0;
-    const experience = resumeData?.experience || [];
+    const experience = (resumeData?.experience || []).filter(
+      (e) => e && e.company !== 'Tata Technologies' && (e.company?.trim() || e.role?.trim())
+    );
     if (experience.length >= 2) experienceScore += 8;
     else if (experience.length === 1) experienceScore += 6;
     else experienceScore += 2; // fresher default
@@ -879,7 +1004,7 @@ export const aiService = {
    */
   async generateInterviewQuestion(role, category, field, subfield) {
     await delay(800);
-    const cfg = getDomainConfig(field, subfield);
+    const cfg = getDomainConfig(field, subfield, role);
     const qs = cfg.interviewQs || [];
 
     if (qs.length === 0) {

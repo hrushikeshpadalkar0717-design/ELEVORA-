@@ -15,7 +15,17 @@ export const ResumePreview = ({ template: overrideTemplate, customData, id = 're
   const resumeContext = useResume();
 
   const activeTemplate = overrideTemplate || resumeContext.activeTemplate || 'modern';
-  const data = customData || resumeContext;
+  const rawData = customData || resumeContext;
+
+  // Filter out empty experience items and legacy demonstration artifacts
+  const validExperience = (rawData.experience || []).filter(
+    (exp) => exp && exp.company !== 'Tata Technologies' && (exp.company?.trim() || exp.role?.trim())
+  );
+
+  const data = {
+    ...rawData,
+    experience: validExperience,
+  };
 
   const renderTemplate = () => {
     switch (activeTemplate) {

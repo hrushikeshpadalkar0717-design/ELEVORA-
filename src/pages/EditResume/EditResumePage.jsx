@@ -52,9 +52,10 @@ export const EditResumePage = () => {
   const [editModalSection, setEditModalSection] = useState(null);
 
   // Resume item details
+  const fallbackRole = careerGoal?.targetRoles?.[0] || profile?.subfield || 'Software Developer';
   const currentResume = savedResumes.find((r) => r.id === id) || savedResumes[0] || {
-    name: 'Mechanical Design Engineer Resume',
-    targetRole: 'Mechanical Design Engineer'
+    name: `${fallbackRole} Resume`,
+    targetRole: fallbackRole
   };
 
   // Synchronize active resume ID with context

@@ -210,6 +210,7 @@ export const StepCareerGoal = () => {
               <p className="text-xs text-slate-400">A concise highlight of your value proposition and expertise.</p>
             </div>
             <Button
+              id="generate-summary-btn"
               type="button"
               variant="outline"
               size="sm"

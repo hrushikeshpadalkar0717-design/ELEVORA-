@@ -93,7 +93,10 @@ export const generateDocxResume = async (resumeData) => {
   });
 
   // Experience Section
-  if (experience && experience.length > 0) {
+  const validExperience = (experience || []).filter(
+    (exp) => exp && exp.company !== 'Tata Technologies' && (exp.company?.trim() || exp.role?.trim())
+  );
+  if (validExperience.length > 0) {
     docChildren.push(
       new Paragraph({
         text: 'WORK & INTERNSHIP EXPERIENCE',
@@ -102,7 +105,7 @@ export const generateDocxResume = async (resumeData) => {
       })
     );
 
-    experience.forEach(exp => {
+    validExperience.forEach(exp => {
       docChildren.push(
         new Paragraph({
           spacing: { before: 100, after: 40 },

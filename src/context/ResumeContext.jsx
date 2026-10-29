@@ -35,20 +35,20 @@ export const ResumeProvider = ({ children }) => {
   const [activeResumeId, setActiveResumeId] = useState('res-1');
 
   const [atsAnalysis, setAtsAnalysis] = useState({
-    score: 92,
-    keywordMatch: 88,
+    score: 85,
+    keywordMatch: 82,
     suggestionsCount: 2,
-    status: 'Great match!',
-    matchedKeywords: ['SolidWorks', 'CAD Modelling', 'Simulation', 'Mechanical Design', 'OpenCV', 'Python', 'Quality Control', 'Documentation'],
-    missingKeywords: ['FEA Analysis', 'GD&T', 'DFM/DFA'],
+    status: 'Ready for Review',
+    matchedKeywords: ['Problem Solving', 'Communication', 'Teamwork', 'Project Execution'],
+    missingKeywords: ['Industry Standards', 'Measurable Metrics', 'Certifications'],
     formattingFeedback: [
       'Clean ATS-friendly heading and section hierarchy.',
       'Contact channels and professional portfolio links formatted properly.',
       'Reverse-chronological structure adheres to recruiter guidelines.'
     ],
     improvementSuggestions: [
-      'Incorporate quantifiable metrics in your Tata Technologies internship experience.',
-      'Add GD&T and FEA Analysis skills to your profile to boost recruiter keyword hits.'
+      'Incorporate quantifiable metrics and measurable outcomes in your project or work experience bullets.',
+      'Add target role keywords to your profile to boost recruiter keyword hits.'
     ]
   });
 
@@ -67,11 +67,50 @@ export const ResumeProvider = ({ children }) => {
           }
           if (parsed.careerGoal) setCareerGoal(parsed.careerGoal);
           if (parsed.education) setEducation(parsed.education);
-          if (parsed.projects) setProjects(parsed.projects);
-          if (parsed.experience) setExperience(parsed.experience);
-          if (parsed.skills) setSkills(parsed.skills);
-          if (parsed.certifications) setCertifications(parsed.certifications);
-          if (parsed.achievements) setAchievements(parsed.achievements);
+          
+          if (parsed.projects) {
+            const cleanedProj = (parsed.projects || []).filter(
+              (p) => p && p.github !== 'https://github.com/johndoe/smart-inspection' && p.github !== 'https://github.com/johndoe/go-kart-chassis'
+            );
+            setProjects(cleanedProj);
+          }
+
+          if (parsed.experience) {
+            const cleanedExp = (parsed.experience || []).filter(
+              (e) => e && e.company !== 'Tata Technologies' && (e.company?.trim() || e.role?.trim())
+            );
+            setExperience(cleanedExp);
+          } else {
+            setExperience([]);
+          }
+
+          if (parsed.skills) {
+            const isLegacyDemoTech =
+              parsed.skills.technical?.length === 6 &&
+              parsed.skills.technical.includes('SolidWorks') &&
+              parsed.skills.technical.includes('ANSYS') &&
+              parsed.profile?.subfield !== 'Mechanical';
+
+            setSkills({
+              ...parsed.skills,
+              technical: isLegacyDemoTech ? [] : (parsed.skills.technical || []),
+            });
+          }
+
+          if (parsed.certifications) {
+            const cleanedCerts = (parsed.certifications || []).filter(
+              (c) => c && c.credentialId !== 'C-987124' && c.credentialId !== 'ACU-55219'
+            );
+            setCertifications(cleanedCerts);
+          }
+
+          if (parsed.achievements) {
+            const cleanedAch = (parsed.achievements || []).filter(
+              (a) => a && a.description !== 'IIT Bombay Techfest' && a.description !== 'Department of Mechanical Engineering'
+            );
+            setAchievements(cleanedAch);
+          }
+
           if (parsed.savedResumes) {
             const migratedResumes = parsed.savedResumes.map((res) => {
               const norm = normalizeLegacyProfile(res.field, res.subfield);
@@ -80,7 +119,25 @@ export const ResumeProvider = ({ children }) => {
             setSavedResumes(migratedResumes);
           }
           if (parsed.activeTemplate) setActiveTemplate(parsed.activeTemplate);
-          if (parsed.atsAnalysis) setAtsAnalysis(parsed.atsAnalysis);
+          
+          if (parsed.atsAnalysis) {
+            const hasDemoAts = parsed.atsAnalysis.improvementSuggestions?.some(
+              (s) => s.includes('Tata Technologies') || s.includes('SolidWorks')
+            );
+            if (hasDemoAts) {
+              setAtsAnalysis({
+                ...parsed.atsAnalysis,
+                matchedKeywords: parsed.atsAnalysis.matchedKeywords?.filter((k) => k !== 'SolidWorks' && k !== 'CAD Modelling') || ['Problem Solving', 'Teamwork'],
+                missingKeywords: parsed.atsAnalysis.missingKeywords?.filter((k) => k !== 'FEA Analysis' && k !== 'GD&T') || ['Industry Standards'],
+                improvementSuggestions: [
+                  'Incorporate quantifiable metrics and measurable outcomes in your project or work experience bullets.',
+                  'Add target role keywords to your profile to boost recruiter keyword hits.'
+                ]
+              });
+            } else {
+              setAtsAnalysis(parsed.atsAnalysis);
+            }
+          }
         }
 
         // Check if user has an active backend session in MongoDB Atlas (via HttpOnly cookie or localStorage token)

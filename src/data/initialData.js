@@ -1,16 +1,16 @@
-import { getRoles, normalizeLegacyProfile } from './careerTaxonomy';
+import { getRoles, normalizeLegacyProfile } from './careerTaxonomy.js';
 
 export const initialProfile = {
-  fullName: 'John Doe',
-  email: 'john.doe@example.com',
-  phone: '+91 98765 43210',
+  fullName: '',
+  email: '',
+  phone: '',
   field: 'Engineering',
-  subfield: 'Mechanical',
-  location: 'Pune, Maharashtra',
-  linkedin: 'https://linkedin.com/in/johndoe',
-  portfolio: 'https://johndoe.dev',
-  github: 'https://github.com/johndoe',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+  subfield: 'CSE',
+  location: '',
+  linkedin: '',
+  portfolio: '',
+  github: '',
+  avatar: '',
   plan: 'free',
 };
 
@@ -18,130 +18,37 @@ export const initialCareerGoal = {
   stage: 'Fresher', // 'Student' | 'Fresher' | 'Intern' | 'Experienced'
   roleType: 'Full-time', // 'Full-time' | 'Internship' | 'Both'
   targetRoles: [
-    'Mechanical Design Engineer',
-    'CAD Engineer',
-    'Manufacturing Engineer'
+    'Software Developer'
   ],
-  summary: 'Seeking a challenging role in Mechanical Engineering to apply my technical skills, 3D CAD modeling expertise, and contribute to innovative engineering solutions.'
+  summary: ''
 };
 
-export const initialEducation = [
-  {
-    id: 'edu-1',
-    degree: 'B.Tech / B.E.',
-    branch: 'Mechanical Engineering',
-    college: 'ABC College of Engineering',
-    location: 'Pune, Maharashtra',
-    startYear: '2020',
-    graduationYear: '2024',
-    score: '8.5 CGPA'
-  }
-];
+export const initialEducation = [];
 
-export const initialProjects = [
-  {
-    id: 'proj-1',
-    name: 'Smart Inspection System',
-    type: 'Academic',
-    description: 'Developed a machine vision-based system to detect defects in mechanical parts using OpenCV and Python.',
-    technologies: ['Python', 'OpenCV', 'MATLAB'],
-    role: 'Team Lead',
-    duration: '3 months',
-    keyFeatures: [
-      'Real-time defect detection with 92% accuracy',
-      'Automated reporting and alerting dashboard',
-      'Integrated CAD component verification'
-    ],
-    github: 'https://github.com/johndoe/smart-inspection',
-    liveUrl: 'https://smart-inspection-demo.vercel.app',
-    link: 'https://github.com/johndoe/smart-inspection'
-  },
-  {
-    id: 'proj-2',
-    name: 'Electric Go-Kart Chassis Design',
-    type: 'Design',
-    description: 'Designed and FEA-simulated a lightweight tubular space-frame chassis for an electric racing vehicle.',
-    technologies: ['SolidWorks', 'ANSYS', 'SimScale'],
-    role: 'Chassis Designer',
-    duration: '5 months',
-    keyFeatures: [
-      'Reduced total chassis weight by 18% while maintaining torsional rigidity',
-      'Conducted stress and crash safety analysis according to SAE standards'
-    ],
-    github: 'https://github.com/johndoe/go-kart-chassis',
-    liveUrl: '',
-    link: ''
-  }
-];
+export const initialProjects = [];
 
-export const initialExperience = [
-  {
-    id: 'exp-1',
-    company: 'Tata Technologies',
-    role: 'Mechanical Design Intern',
-    location: 'Pune, Maharashtra',
-    startDate: 'May 2023',
-    endDate: 'Jul 2023',
-    currentlyWorking: false,
-    responsibilities: [
-      'Assisted in designing mechanical components and enclosures using SolidWorks.',
-      'Worked on CAD modelling, geometric tolerancing (GD&T), and 3D simulations.',
-      'Collaborated with senior engineers on structural verification and project documentation.'
-    ]
-  }
-];
+export const initialExperience = [];
 
 export const initialSkills = {
-  technical: ['SolidWorks', 'AutoCAD', 'ANSYS', 'MATLAB', 'Microsoft Office', 'Python'],
-  soft: ['Problem Solving', 'Communication', 'Teamwork', 'Time Management', 'Leadership'],
+  technical: [],
+  soft: ['Problem Solving', 'Communication', 'Teamwork', 'Time Management', 'Adaptability'],
   languages: [
     { name: 'English', proficiency: 'Fluent' },
-    { name: 'Hindi', proficiency: 'Fluent' },
-    { name: 'Marathi', proficiency: 'Native' }
+    { name: 'Hindi', proficiency: 'Fluent' }
   ]
 };
 
-export const initialCertifications = [
-  {
-    id: 'cert-1',
-    name: 'SolidWorks Professional (CSWP)',
-    issuer: 'Dassault Systèmes',
-    date: 'Jan 2023',
-    credentialId: 'C-987124',
-    link: 'https://www.solidworks.com/certifications/cswp'
-  },
-  {
-    id: 'cert-2',
-    name: 'AutoCAD Certified User',
-    issuer: 'Autodesk',
-    date: 'Aug 2022',
-    credentialId: 'ACU-55219',
-    link: 'https://www.autodesk.com/certification'
-  }
-];
+export const initialCertifications = [];
 
-export const initialAchievements = [
-  {
-    id: 'ach-1',
-    title: '3rd Rank in National Level Design Competition',
-    description: 'IIT Bombay Techfest',
-    year: '2023'
-  },
-  {
-    id: 'ach-2',
-    title: 'Best Final Year Capstone Project Nominee',
-    description: 'Department of Mechanical Engineering',
-    year: '2024'
-  }
-];
+export const initialAchievements = [];
 
 export const initialSavedResumes = [
   {
     id: 'res-1',
-    name: 'Mechanical Design Engineer Resume',
-    targetRole: 'Mechanical Design Engineer',
+    name: 'Software Developer Resume',
+    targetRole: 'Software Developer',
     field: 'Engineering',
-    subfield: 'Mechanical',
+    subfield: 'CSE',
     template: 'modern',
     lastUpdated: 'Just now',
     atsScore: 92,
@@ -150,10 +57,10 @@ export const initialSavedResumes = [
   },
   {
     id: 'res-2',
-    name: 'CAD & Simulation Specialist Resume',
-    targetRole: 'CAD Engineer',
+    name: 'Full-Stack Developer Resume',
+    targetRole: 'Full-Stack Developer',
     field: 'Engineering',
-    subfield: 'Mechanical',
+    subfield: 'CSE',
     template: 'classic',
     lastUpdated: '2 days ago',
     atsScore: 89,
@@ -162,10 +69,10 @@ export const initialSavedResumes = [
   },
   {
     id: 'res-3',
-    name: 'Manufacturing Engineer Resume',
-    targetRole: 'Manufacturing Engineer',
+    name: 'Frontend Developer Resume',
+    targetRole: 'Frontend Developer',
     field: 'Engineering',
-    subfield: 'Mechanical',
+    subfield: 'CSE',
     template: 'executive',
     lastUpdated: '1 week ago',
     atsScore: 95,

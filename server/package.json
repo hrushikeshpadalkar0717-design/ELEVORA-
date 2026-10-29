@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node test/phase2DbHealth.test.js && node test/phase5SecurityAuth.test.js && node test/pricingUpgradeNotice.test.js && node test/linkedinReauth.test.js"
+    "test": "node test/phase2DbHealth.test.js && node test/phase5SecurityAuth.test.js && node test/pricingUpgradeNotice.test.js && node test/linkedinReauth.test.js && node test/resumeAccuracy.test.js"
   },
   "dependencies": {
     "axios": "^1.8.1",

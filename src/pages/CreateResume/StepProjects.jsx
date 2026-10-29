@@ -293,7 +293,7 @@ export const StepProjects = () => {
             label="Technologies Used (comma separated)"
             value={projectForm.technologies}
             onChange={(e) => setProjectForm({ ...projectForm, technologies: e.target.value })}
-            placeholder="Python, OpenCV, MATLAB, SolidWorks"
+            placeholder="e.g. React, Node.js, Python, or SQL"
           />
 
           <div className="grid grid-cols-2 gap-3">
